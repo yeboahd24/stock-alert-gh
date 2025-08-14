@@ -113,6 +113,36 @@ var alertCounter int
 
 const GSE_BASE_URL = "https://dev.kwayisi.org/apis/gse"
 
+// Alternative proxy endpoint for Render compatibility
+func getStockDataWithProxy(endpoint string) (*http.Response, error) {
+	client := &http.Client{Timeout: 20 * time.Second}
+	
+	// Try direct first
+	resp, err := client.Get(GSE_BASE_URL + endpoint)
+	if err == nil && resp.StatusCode == 200 {
+		log.Printf("Direct API success: %s", GSE_BASE_URL + endpoint)
+		return resp, nil
+	}
+	if resp != nil {
+		resp.Body.Close()
+	}
+	log.Printf("Direct API failed: %v, trying proxy...", err)
+	
+	// Try through CORS proxy
+	proxyURL := "https://api.allorigins.win/raw?url=" + GSE_BASE_URL + endpoint
+	resp, err = client.Get(proxyURL)
+	if err == nil && resp.StatusCode == 200 {
+		log.Printf("Proxy API success: %s", proxyURL)
+		return resp, nil
+	}
+	if resp != nil {
+		resp.Body.Close()
+	}
+	log.Printf("Proxy API also failed: %v", err)
+	
+	return nil, err
+}
+
 // Fetch with retry logic
 func fetchWithRetry(url string, retries int) (*http.Response, error) {
 	client := &http.Client{
@@ -211,7 +241,7 @@ func main() {
 // Stock handlers
 func getAllStocks(w http.ResponseWriter, r *http.Request) {
 	// Try to fetch with retry logic
-	resp, err := fetchWithRetry(GSE_BASE_URL + "/live", 3)
+	resp, err := getStockDataWithProxy("/live")
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock data if external API is unavailable
 		log.Printf("External API unavailable, using mock data. Error: %v", err)

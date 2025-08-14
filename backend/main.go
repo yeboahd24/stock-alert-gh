@@ -111,7 +111,7 @@ type UpdateAlertRequest struct {
 var alerts []Alert
 var alertCounter int
 
-const GSE_BASE_URL = "https://gse-api.kwayisi.org"
+const GSE_BASE_URL = "https://dev.kwayisi.org/apis/gse"
 
 func main() {
 	// Initialize sample data

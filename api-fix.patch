@@ -1,0 +1,13 @@
+diff --git a/backend/main.go b/backend/main.go
+index 8dbb532..20f1626 100644
+--- a/backend/main.go
++++ b/backend/main.go
+@@ -111,7 +111,7 @@ type UpdateAlertRequest struct {
+ var alerts []Alert
+ var alertCounter int
+ 
+-const GSE_BASE_URL = "https://gse-api.kwayisi.org"
++const GSE_BASE_URL = "https://dev.kwayisi.org/apis/gse"
+ 
+ func main() {
+ 	// Initialize sample data

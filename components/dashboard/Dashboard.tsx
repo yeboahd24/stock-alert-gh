@@ -95,8 +95,8 @@ const Dashboard: React.FC = () => {
     const change = selectedStock.change;
     
     // Generate 7 days of mock historical data based on current price
-    const dates = [];
-    const prices = [];
+    const dates: string[] = [];
+    const prices: number[] = [];
     
     for (let i = 6; i >= 0; i--) {
       const date = new Date();

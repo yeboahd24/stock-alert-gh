@@ -11,6 +11,10 @@ import {
   Fab,
   Snackbar,
   Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
@@ -44,6 +48,7 @@ const Dashboard: React.FC = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [alerts, setAlerts] = useState<ApiAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedChartStock, setSelectedChartStock] = useState<string>('');
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
@@ -61,6 +66,10 @@ const Dashboard: React.FC = () => {
         ]);
         setStocks(stocksData);
         setAlerts(alertsData);
+        // Set the first stock as default for chart
+        if (stocksData.length > 0 && !selectedChartStock) {
+          setSelectedChartStock(stocksData[0].symbol);
+        }
       } catch (error) {
         console.error('Failed to load data:', error);
         console.error('Error details:', error);
@@ -77,15 +86,36 @@ const Dashboard: React.FC = () => {
     loadData();
   }, []);
 
-  // Mock chart data (could be enhanced to use real historical data)
-  const chartData = [
-    { date: '2024-01-15', price: 0.78 },
-    { date: '2024-01-16', price: 0.80 },
-    { date: '2024-01-17', price: 0.79 },
-    { date: '2024-01-18', price: 0.81 },
-    { date: '2024-01-19', price: 0.83 },
-    { date: '2024-01-20', price: 0.82 },
-  ];
+  // Generate chart data based on the selected stock
+  const getChartData = () => {
+    if (stocks.length === 0 || !selectedChartStock) return [];
+    
+    const selectedStock = stocks.find(stock => stock.symbol === selectedChartStock) || stocks[0];
+    const currentPrice = selectedStock.currentPrice;
+    const change = selectedStock.change;
+    
+    // Generate 7 days of mock historical data based on current price
+    const dates = [];
+    const prices = [];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      dates.push(date.toISOString().split('T')[0]);
+      
+      // Generate realistic price variations around current price
+      const variation = (Math.random() - 0.5) * 0.1 * currentPrice;
+      const price = i === 0 ? currentPrice : currentPrice - change + variation;
+      prices.push(Math.max(0.01, price)); // Ensure positive price
+    }
+    
+    return dates.map((date, index) => ({
+      date,
+      price: prices[index]
+    }));
+  };
+
+  const chartData = getChartData();
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setCurrentTab(newValue);
@@ -217,14 +247,36 @@ const Dashboard: React.FC = () => {
 
             {/* Chart */}
             <Stack spacing={2}>
-              <Typography variant="h6" component="h2">
-                Price Chart
-              </Typography>
-              <StockPriceChart
-                symbol="MTN"
-                data={chartData}
-                height={400}
-              />
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="h6" component="h2">
+                  Price Chart
+                </Typography>
+                {stocks.length > 0 && (
+                  <FormControl size="small" sx={{ minWidth: 200 }}>
+                    <InputLabel>Select Stock</InputLabel>
+                    <Select
+                      value={selectedChartStock}
+                      label="Select Stock"
+                      onChange={(e) => setSelectedChartStock(e.target.value)}
+                    >
+                      {stocks.map((stock) => (
+                        <MenuItem key={stock.symbol} value={stock.symbol}>
+                          {stock.symbol} - {stock.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+              </Stack>
+              {stocks.length > 0 && selectedChartStock ? (
+                <StockPriceChart
+                  symbol={selectedChartStock}
+                  data={chartData}
+                  height={400}
+                />
+              ) : (
+                <Typography>Loading chart data...</Typography>
+              )}
             </Stack>
           </Stack>
         </TabPanel>

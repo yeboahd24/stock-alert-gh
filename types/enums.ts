@@ -1,0 +1,28 @@
+// Alert types for the stock alert system
+export enum AlertType {
+  PRICE_THRESHOLD = 'price_threshold',
+  IPO_ALERT = 'ipo_alert',
+  DIVIDEND_ANNOUNCEMENT = 'dividend_announcement'
+}
+
+// Notification channels available
+export enum NotificationChannel {
+  SMS = 'sms',
+  WHATSAPP = 'whatsapp',
+  TELEGRAM = 'telegram',
+  EMAIL = 'email',
+  MOBILE_PUSH = 'mobile_push'
+}
+
+// Alert status
+export enum AlertStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  TRIGGERED = 'triggered'
+}
+
+// Language options
+export enum Language {
+  ENGLISH = 'english',
+  TWI = 'twi'
+}

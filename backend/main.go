@@ -131,7 +131,7 @@ func main() {
 
 	// CORS configuration
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173", "https://stock-alert-gh.onrender.com", "https://shares-alert-frontend.onrender.com"},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://localhost:5173", "https://stock-alert-gh.onrender.com", "https://stock-alert-gh-backend.onrender.com"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},

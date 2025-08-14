@@ -113,6 +113,39 @@ var alertCounter int
 
 const GSE_BASE_URL = "https://dev.kwayisi.org/apis/gse"
 
+// Fetch with retry logic
+func fetchWithRetry(url string, retries int) (*http.Response, error) {
+	client := &http.Client{
+		Timeout: 15 * time.Second, // Increased timeout
+	}
+	
+	var lastErr error
+	for i := 0; i < retries; i++ {
+		if i > 0 {
+			time.Sleep(time.Duration(i) * time.Second) // Progressive delay
+			log.Printf("Retrying API call (attempt %d/%d) to %s", i+1, retries, url)
+		}
+		
+		resp, err := client.Get(url)
+		if err == nil && resp.StatusCode == 200 {
+			return resp, nil
+		}
+		
+		if resp != nil {
+			resp.Body.Close()
+		}
+		lastErr = err
+		
+		if err != nil {
+			log.Printf("API attempt %d failed: %v", i+1, err)
+		} else {
+			log.Printf("API attempt %d failed: HTTP %d", i+1, resp.StatusCode)
+		}
+	}
+	
+	return nil, lastErr
+}
+
 func main() {
 	// Initialize sample data
 	initSampleAlerts()
@@ -177,11 +210,8 @@ func main() {
 
 // Stock handlers
 func getAllStocks(w http.ResponseWriter, r *http.Request) {
-	// Try to fetch from external API first with timeout
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	resp, err := client.Get(GSE_BASE_URL + "/live")
+	// Try to fetch with retry logic
+	resp, err := fetchWithRetry(GSE_BASE_URL + "/live", 3)
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock data if external API is unavailable
 		log.Printf("External API unavailable, using mock data. Error: %v", err)
@@ -230,11 +260,8 @@ func getStock(w http.ResponseWriter, r *http.Request) {
 	symbol := chi.URLParam(r, "symbol")
 	symbol = strings.ToUpper(symbol)
 
-	// Try external API first with timeout
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	resp, err := client.Get(GSE_BASE_URL + "/live/" + symbol)
+	// Try external API with retry logic
+	resp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + symbol, 2)
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock data
 		mockStocks := getMockStocks()
@@ -290,11 +317,8 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 	symbol := chi.URLParam(r, "symbol")
 	symbol = strings.ToUpper(symbol)
 
-	// Try external API first with timeout
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
-	resp, err := client.Get(GSE_BASE_URL + "/equities/" + symbol)
+	// Try external API with retry logic
+	resp, err := fetchWithRetry(GSE_BASE_URL + "/equities/" + symbol, 2)
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock detailed data
 		mockStock := getMockDetailedStock(symbol)
@@ -326,7 +350,7 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 	var volume int64 = 0
 	var changePercent float64 = 0
 
-	liveResp, err := client.Get(GSE_BASE_URL + "/live/" + symbol)
+	liveResp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + symbol, 1)
 	if err == nil {
 		defer liveResp.Body.Close()
 		if liveResp.StatusCode == 200 {
@@ -417,10 +441,9 @@ func createAlert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get current stock price with timeout
+	// Get current stock price with retry
 	var currentPrice *float64
-	client := &http.Client{Timeout: 5 * time.Second}
-	if stockResp, err := client.Get(GSE_BASE_URL + "/live/" + req.StockSymbol); err == nil {
+	if stockResp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + req.StockSymbol, 1); err == nil {
 		defer stockResp.Body.Close()
 		if stockResp.StatusCode == 200 {
 			var stock StockLive
@@ -530,9 +553,8 @@ func checkAlerts() {
 			continue
 		}
 
-		// Get current stock price with timeout
-		client := &http.Client{Timeout: 5 * time.Second}
-		resp, err := client.Get(GSE_BASE_URL + "/live/" + alert.StockSymbol)
+		// Get current stock price with retry
+		resp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + alert.StockSymbol, 1)
 		if err != nil {
 			continue
 		}

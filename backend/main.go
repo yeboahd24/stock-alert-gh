@@ -177,8 +177,11 @@ func main() {
 
 // Stock handlers
 func getAllStocks(w http.ResponseWriter, r *http.Request) {
-	// Try to fetch from external API first
-	resp, err := http.Get(GSE_BASE_URL + "/live")
+	// Try to fetch from external API first with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Get(GSE_BASE_URL + "/live")
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock data if external API is unavailable
 		log.Printf("External API unavailable, using mock data. Error: %v", err)
@@ -227,8 +230,11 @@ func getStock(w http.ResponseWriter, r *http.Request) {
 	symbol := chi.URLParam(r, "symbol")
 	symbol = strings.ToUpper(symbol)
 
-	// Try external API first
-	resp, err := http.Get(GSE_BASE_URL + "/live/" + symbol)
+	// Try external API first with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Get(GSE_BASE_URL + "/live/" + symbol)
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock data
 		mockStocks := getMockStocks()
@@ -284,8 +290,11 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 	symbol := chi.URLParam(r, "symbol")
 	symbol = strings.ToUpper(symbol)
 
-	// Try external API first
-	resp, err := http.Get(GSE_BASE_URL + "/equities/" + symbol)
+	// Try external API first with timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Get(GSE_BASE_URL + "/equities/" + symbol)
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock detailed data
 		mockStock := getMockDetailedStock(symbol)
@@ -317,7 +326,7 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 	var volume int64 = 0
 	var changePercent float64 = 0
 
-	liveResp, err := http.Get(GSE_BASE_URL + "/live/" + symbol)
+	liveResp, err := client.Get(GSE_BASE_URL + "/live/" + symbol)
 	if err == nil {
 		defer liveResp.Body.Close()
 		if liveResp.StatusCode == 200 {
@@ -408,9 +417,10 @@ func createAlert(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get current stock price
+	// Get current stock price with timeout
 	var currentPrice *float64
-	if stockResp, err := http.Get(GSE_BASE_URL + "/live/" + req.StockSymbol); err == nil {
+	client := &http.Client{Timeout: 5 * time.Second}
+	if stockResp, err := client.Get(GSE_BASE_URL + "/live/" + req.StockSymbol); err == nil {
 		defer stockResp.Body.Close()
 		if stockResp.StatusCode == 200 {
 			var stock StockLive
@@ -520,8 +530,9 @@ func checkAlerts() {
 			continue
 		}
 
-		// Get current stock price
-		resp, err := http.Get(GSE_BASE_URL + "/live/" + alert.StockSymbol)
+		// Get current stock price with timeout
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Get(GSE_BASE_URL + "/live/" + alert.StockSymbol)
 		if err != nil {
 			continue
 		}

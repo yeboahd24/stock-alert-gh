@@ -144,37 +144,37 @@ func getStockDataWithProxy(endpoint string) (*http.Response, error) {
 }
 
 // Fetch with retry logic
-func fetchWithRetry(url string, retries int) (*http.Response, error) {
-	client := &http.Client{
-		Timeout: 15 * time.Second, // Increased timeout
-	}
+// func fetchWithRetry(url string, retries int) (*http.Response, error) {
+// 	client := &http.Client{
+// 		Timeout: 15 * time.Second, // Increased timeout
+// 	}
 	
-	var lastErr error
-	for i := 0; i < retries; i++ {
-		if i > 0 {
-			time.Sleep(time.Duration(i) * time.Second) // Progressive delay
-			log.Printf("Retrying API call (attempt %d/%d) to %s", i+1, retries, url)
-		}
+// 	var lastErr error
+// 	for i := 0; i < retries; i++ {
+// 		if i > 0 {
+// 			time.Sleep(time.Duration(i) * time.Second) // Progressive delay
+// 			log.Printf("Retrying API call (attempt %d/%d) to %s", i+1, retries, url)
+// 		}
 		
-		resp, err := client.Get(url)
-		if err == nil && resp.StatusCode == 200 {
-			return resp, nil
-		}
+// 		resp, err := client.Get(url)
+// 		if err == nil && resp.StatusCode == 200 {
+// 			return resp, nil
+// 		}
 		
-		if resp != nil {
-			resp.Body.Close()
-		}
-		lastErr = err
+// 		if resp != nil {
+// 			resp.Body.Close()
+// 		}
+// 		lastErr = err
 		
-		if err != nil {
-			log.Printf("API attempt %d failed: %v", i+1, err)
-		} else {
-			log.Printf("API attempt %d failed: HTTP %d", i+1, resp.StatusCode)
-		}
-	}
+// 		if err != nil {
+// 			log.Printf("API attempt %d failed: %v", i+1, err)
+// 		} else {
+// 			log.Printf("API attempt %d failed: HTTP %d", i+1, resp.StatusCode)
+// 		}
+// 	}
 	
-	return nil, lastErr
-}
+// 	return nil, lastErr
+// }
 
 func main() {
 	// Initialize sample data
@@ -291,7 +291,7 @@ func getStock(w http.ResponseWriter, r *http.Request) {
 	symbol = strings.ToUpper(symbol)
 
 	// Try external API with retry logic
-	resp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + symbol, 2)
+	resp, err := getStockDataWithProxy("/live/" + symbol)
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock data
 		mockStocks := getMockStocks()
@@ -348,7 +348,7 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 	symbol = strings.ToUpper(symbol)
 
 	// Try external API with retry logic
-	resp, err := fetchWithRetry(GSE_BASE_URL + "/equities/" + symbol, 2)
+	resp, err := getStockDataWithProxy("/equities/" + symbol)
 	if err != nil || resp.StatusCode != 200 {
 		// Fallback to mock detailed data
 		mockStock := getMockDetailedStock(symbol)
@@ -380,7 +380,7 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 	var volume int64 = 0
 	var changePercent float64 = 0
 
-	liveResp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + symbol, 1)
+	liveResp, err := getStockDataWithProxy("/live/" + symbol)
 	if err == nil {
 		defer liveResp.Body.Close()
 		if liveResp.StatusCode == 200 {
@@ -473,7 +473,7 @@ func createAlert(w http.ResponseWriter, r *http.Request) {
 
 	// Get current stock price with retry
 	var currentPrice *float64
-	if stockResp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + req.StockSymbol, 1); err == nil {
+	if stockResp, err := getStockDataWithProxy("/live/" + req.StockSymbol); err == nil {
 		defer stockResp.Body.Close()
 		if stockResp.StatusCode == 200 {
 			var stock StockLive
@@ -584,7 +584,7 @@ func checkAlerts() {
 		}
 
 		// Get current stock price with retry
-		resp, err := fetchWithRetry(GSE_BASE_URL + "/live/" + alert.StockSymbol, 1)
+		resp, err := getStockDataWithProxy("/live/" + alert.StockSymbol)
 		if err != nil {
 			continue
 		}

@@ -144,4 +144,4 @@ This project is licensed under the MIT License.
 
 ## Support
 
-For support or questions, please open an issue in the GitHub repository.
+For support or questions, please open an issue in the GitHub repository.# Frontend redeploy trigger - Thu Aug 14 12:42:06 UTC 2025

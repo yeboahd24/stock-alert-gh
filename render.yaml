@@ -14,15 +14,12 @@ services:
     
   # Frontend Service  
   - type: web
-    name: shares-alert-frontend
+    name: stock-alert-gh
     env: static
     buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: shares-alert-backend
-          property: host
+        value: https://shares-alert-backend.onrender.com/api/v1
         
 databases: []

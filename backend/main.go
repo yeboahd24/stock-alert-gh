@@ -585,7 +585,7 @@ func checkAlerts() {
 
 		// Get current stock price with retry
 		resp, err := getStockDataWithProxy("/live/" + alert.StockSymbol)
-		if err != nil {
+		if err != nil || resp == nil {
 			continue
 		}
 		defer resp.Body.Close()

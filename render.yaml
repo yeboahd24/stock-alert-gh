@@ -1,10 +1,10 @@
 services:
   # Backend Service
   - type: web
-    name: shares-alert-backend
+    name: stock-alert-gh-backend
     env: go
-    buildCommand: go build -o main .
-    startCommand: ./main
+    buildCommand: cd backend && go build -o main .
+    startCommand: cd backend && ./main
     envVars:
       - key: PORT
         value: 10000

@@ -242,7 +242,7 @@ func main() {
 func getAllStocks(w http.ResponseWriter, r *http.Request) {
 	// Try to fetch with retry logic
 	resp, err := getStockDataWithProxy("/live")
-	if err != nil || resp.StatusCode != 200 {
+	if err != nil || resp == nil || resp.StatusCode != 200 {
 		// Fallback to mock data if external API is unavailable
 		log.Printf("External API unavailable, using mock data. Error: %v", err)
 		mockStocks := getMockStocks()
@@ -292,7 +292,7 @@ func getStock(w http.ResponseWriter, r *http.Request) {
 
 	// Try external API with retry logic
 	resp, err := getStockDataWithProxy("/live/" + symbol)
-	if err != nil || resp.StatusCode != 200 {
+	if err != nil || resp == nil || resp.StatusCode != 200 {
 		// Fallback to mock data
 		mockStocks := getMockStocks()
 		for _, stock := range mockStocks {
@@ -349,7 +349,7 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 
 	// Try external API with retry logic
 	resp, err := getStockDataWithProxy("/equities/" + symbol)
-	if err != nil || resp.StatusCode != 200 {
+	if err != nil || resp == nil || resp.StatusCode != 200 {
 		// Fallback to mock detailed data
 		mockStock := getMockDetailedStock(symbol)
 		if mockStock != nil {
@@ -381,7 +381,7 @@ func getStockDetails(w http.ResponseWriter, r *http.Request) {
 	var changePercent float64 = 0
 
 	liveResp, err := getStockDataWithProxy("/live/" + symbol)
-	if err == nil {
+	if err == nil && liveResp != nil {
 		defer liveResp.Body.Close()
 		if liveResp.StatusCode == 200 {
 			if json.NewDecoder(liveResp.Body).Decode(&liveStock) == nil {
@@ -473,7 +473,7 @@ func createAlert(w http.ResponseWriter, r *http.Request) {
 
 	// Get current stock price with retry
 	var currentPrice *float64
-	if stockResp, err := getStockDataWithProxy("/live/" + req.StockSymbol); err == nil {
+	if stockResp, err := getStockDataWithProxy("/live/" + req.StockSymbol); err == nil && stockResp != nil {
 		defer stockResp.Body.Close()
 		if stockResp.StatusCode == 200 {
 			var stock StockLive
@@ -614,28 +614,28 @@ func checkAlerts() {
 func getMockStocks() []EnhancedStock {
 	return []EnhancedStock{
 		{
-			Symbol:        "MTN",
-			Name:          "MTN Ghana",
-			CurrentPrice:  0.82,
-			PreviousClose: 0.80,
-			Change:        0.02,
-			ChangePercent: 2.5,
-			Volume:        125000,
-			LastUpdated:   time.Now(),
-			MarketCap:     func() *float64 { v := 1500000000.0; return &v }(),
-			Sector:        func() *string { v := "Telecommunications"; return &v }(),
-			Industry:      func() *string { v := "Mobile Networks"; return &v }(),
-		},
-		{
 			Symbol:        "ACCESS",
 			Name:          "Access Bank Ghana Plc",
-			CurrentPrice:  3.45,
-			PreviousClose: 3.40,
-			Change:        0.05,
-			ChangePercent: 1.47,
-			Volume:        89000,
+			CurrentPrice:  16.37,
+			PreviousClose: 16.37,
+			Change:        0.0,
+			ChangePercent: 0.0,
+			Volume:        0,
 			LastUpdated:   time.Now(),
 			MarketCap:     func() *float64 { v := 2100000000.0; return &v }(),
+			Sector:        func() *string { v := "Financial Services"; return &v }(),
+			Industry:      func() *string { v := "Banking"; return &v }(),
+		},
+		{
+			Symbol:        "ADB",
+			Name:          "Agricultural Development Bank",
+			CurrentPrice:  5.06,
+			PreviousClose: 5.06,
+			Change:        0.0,
+			ChangePercent: 0.0,
+			Volume:        0,
+			LastUpdated:   time.Now(),
+			MarketCap:     func() *float64 { v := 1800000000.0; return &v }(),
 			Sector:        func() *string { v := "Financial Services"; return &v }(),
 			Industry:      func() *string { v := "Banking"; return &v }(),
 		},

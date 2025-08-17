@@ -1,8 +1,12 @@
+import React, { Suspense } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { CircularProgress, Box } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
-import Dashboard from '../components/dashboard/Dashboard';
+
+// Lazy load the Dashboard component
+const Dashboard = React.lazy(() => import('../components/dashboard/Dashboard'));
 
 // Create a custom theme
 const theme = createTheme({
@@ -36,13 +40,27 @@ const theme = createTheme({
   },
 });
 
+// Loading component
+const LoadingFallback = () => (
+  <Box 
+    display="flex" 
+    justifyContent="center" 
+    alignItems="center" 
+    minHeight="100vh"
+  >
+    <CircularProgress />
+  </Box>
+);
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
         <ProtectedRoute>
-          <Dashboard />
+          <Suspense fallback={<LoadingFallback />}>
+            <Dashboard />
+          </Suspense>
         </ProtectedRoute>
       </AuthProvider>
     </ThemeProvider>

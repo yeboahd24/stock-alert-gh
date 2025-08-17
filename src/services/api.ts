@@ -1,5 +1,43 @@
 // API service for communicating with the Go backend
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:10000/api/v1';
+
+// Auth token management
+let authToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
+export const getAuthToken = () => authToken;
+
+// Helper function to make authenticated requests
+const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
+  const token = authToken || localStorage.getItem('auth_token');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401) {
+    // Token expired or invalid
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = '/login';
+    throw new Error('Authentication required');
+  }
+
+  return response;
+};
 
 // Types matching the backend API
 export interface Stock {
@@ -46,6 +84,27 @@ export interface DetailedStock {
   company: Company;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  picture: string;
+  googleId: string;
+  emailVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserPreferences {
+  id: string;
+  userId: string;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  notificationFrequency: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Alert {
   id: string;
   userId: string;
@@ -57,6 +116,12 @@ export interface Alert {
   status: string;
   createdAt: string;
   updatedAt: string;
+  triggeredAt?: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
 }
 
 export interface CreateAlertRequest {
@@ -65,6 +130,81 @@ export interface CreateAlertRequest {
   alertType: string;
   thresholdPrice?: number;
 }
+
+// Authentication API functions
+export const authApi = {
+  // Get Google OAuth URL
+  getGoogleAuthUrl: async (state?: string): Promise<{ authUrl: string }> => {
+    const params = state ? `?state=${encodeURIComponent(state)}` : '';
+    const response = await fetch(`${API_BASE_URL}/auth/google${params}`);
+    if (!response.ok) {
+      throw new Error('Failed to get Google auth URL');
+    }
+    return response.json();
+  },
+
+  // Handle Google OAuth callback
+  googleCallback: async (code: string): Promise<AuthResponse> => {
+    const response = await fetch(`${API_BASE_URL}/auth/google/callback`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ code }),
+    });
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Authentication failed: ${error}`);
+    }
+    const data = await response.json();
+    setAuthToken(data.token);
+    return data;
+  },
+
+  // Get user profile
+  getProfile: async (): Promise<User> => {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/auth/profile`);
+    if (!response.ok) {
+      throw new Error('Failed to get user profile');
+    }
+    return response.json();
+  },
+
+  // Logout
+  logout: async (): Promise<void> => {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/auth/logout`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to logout');
+    }
+    setAuthToken(null);
+  },
+};
+
+// User API functions
+export const userApi = {
+  // Get user preferences
+  getPreferences: async (): Promise<UserPreferences> => {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/user/preferences`);
+    if (!response.ok) {
+      throw new Error('Failed to get user preferences');
+    }
+    return response.json();
+  },
+
+  // Update user preferences
+  updatePreferences: async (preferences: Partial<UserPreferences>): Promise<UserPreferences> => {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/user/preferences`, {
+      method: 'PUT',
+      body: JSON.stringify(preferences),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update user preferences');
+    }
+    return response.json();
+  },
+};
 
 // Stock API functions
 export const stockApi = {
@@ -107,36 +247,38 @@ export const stockApi = {
 
 // Alert API functions
 export const alertApi = {
-  // Get all alerts
-  getAllAlerts: async (userId?: string, status?: string): Promise<Alert[]> => {
+  // Get all alerts (authenticated)
+  getAllAlerts: async (status?: string, stockSymbol?: string): Promise<Alert[]> => {
     const params = new URLSearchParams();
-    if (userId) params.append('userId', userId);
     if (status) params.append('status', status);
+    if (stockSymbol) params.append('stockSymbol', stockSymbol);
     
     const url = `${API_BASE_URL}/alerts${params.toString() ? `?${params.toString()}` : ''}`;
     console.log('Fetching alerts from:', url);
     try {
-      const response = await fetch(url);
+      const response = await makeAuthenticatedRequest(url);
       console.log('Alerts response status:', response.status);
       if (!response.ok) {
+        if (response.status === 401) {
+          console.warn('Authentication failed for alerts - user may need to re-login');
+          return []; // Return empty array instead of throwing error
+        }
         throw new Error(`Failed to fetch alerts: ${response.status} ${response.statusText}`);
       }
       const data = await response.json();
-      console.log('Alerts data received:', data.length, 'alerts');
-      return data;
+      console.log('Alerts data received:', Array.isArray(data) ? data.length : 'not an array', 'alerts');
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.error('Error in getAllAlerts:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent app crash
+      return [];
     }
   },
 
-  // Create alert
+  // Create alert (authenticated)
   createAlert: async (alertData: CreateAlertRequest): Promise<Alert> => {
-    const response = await fetch(`${API_BASE_URL}/alerts`, {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/alerts`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(alertData),
     });
     if (!response.ok) {
@@ -145,22 +287,19 @@ export const alertApi = {
     return response.json();
   },
 
-  // Get specific alert
+  // Get specific alert (authenticated)
   getAlert: async (id: string): Promise<Alert> => {
-    const response = await fetch(`${API_BASE_URL}/alerts/${id}`);
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/alerts/${id}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch alert ${id}`);
     }
     return response.json();
   },
 
-  // Update alert
+  // Update alert (authenticated)
   updateAlert: async (id: string, updates: Partial<CreateAlertRequest & { status: string }>): Promise<Alert> => {
-    const response = await fetch(`${API_BASE_URL}/alerts/${id}`, {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/alerts/${id}`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(updates),
     });
     if (!response.ok) {
@@ -169,9 +308,9 @@ export const alertApi = {
     return response.json();
   },
 
-  // Delete alert
+  // Delete alert (authenticated)
   deleteAlert: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/alerts/${id}`, {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/alerts/${id}`, {
       method: 'DELETE',
     });
     if (!response.ok) {

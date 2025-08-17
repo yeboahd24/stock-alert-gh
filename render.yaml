@@ -10,6 +10,10 @@ services:
         value: 10000
       - key: GO_ENV
         value: production
+      - key: OAUTH_REDIRECT_URL
+        value: https://stock-alert-gh.onrender.com/
+      - key: FRONTEND_URL
+        value: https://stock-alert-gh.onrender.com
     healthCheckPath: /api/v1/health
     
   # Frontend Service  

@@ -9,6 +9,7 @@ import {
   Divider,
   TextField,
   Button,
+  Box,
 } from '@mui/material';
 import { NotificationChannel } from '../../types/enums';
 import { formatNotificationChannel } from '../../utils/formatters';
@@ -89,10 +90,20 @@ const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 control={
                   <Switch
                     checked={settings.channels[channel]}
+                    disabled={channel !== NotificationChannel.EMAIL}
                     onChange={() => handleChannelToggle(channel)}
                   />
                 }
-                label={formatNotificationChannel(channel)}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <span>{formatNotificationChannel(channel)}</span>
+                    {channel !== NotificationChannel.EMAIL && (
+                      <Typography variant="caption" color="text.secondary">
+                        (Coming Soon)
+                      </Typography>
+                    )}
+                  </Box>
+                }
               />
             ))}
           </Stack>

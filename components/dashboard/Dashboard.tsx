@@ -27,9 +27,11 @@ import StockPriceChart from '../charts/StockPriceChart';
 import AlertForm, { AlertFormData } from '../forms/AlertForm';
 import NotificationSettings from '../forms/NotificationSettings';
 import AlertsTable from '../tables/AlertsTable';
-import { mockStore } from '../../data/sharesAlertMockData';
 import { AlertType, AlertStatus } from '../../types/enums';
-import { stockApi, alertApi, Stock, Alert as ApiAlert } from '../../src/services/api';
+import { stockApi, alertApi, Stock, Alert as ApiAlert, setAuthToken } from '../../src/services/api';
+import { useAuth } from '../../src/contexts/AuthContext';
+import UserMenu from '../common/UserMenu';
+import UserProfile from '../profile/UserProfile';
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(3),
@@ -43,8 +45,10 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
 );
 
 const Dashboard: React.FC = () => {
+  const { user, token } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [alertFormOpen, setAlertFormOpen] = useState(false);
+  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [alerts, setAlerts] = useState<ApiAlert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +59,13 @@ const Dashboard: React.FC = () => {
     severity: 'success',
   });
 
+  // Set auth token when component mounts
+  useEffect(() => {
+    if (token) {
+      setAuthToken(token);
+    }
+  }, [token]);
+
   // Load data from API
   useEffect(() => {
     const loadData = async () => {
@@ -62,10 +73,10 @@ const Dashboard: React.FC = () => {
         setLoading(true);
         const [stocksData, alertsData] = await Promise.all([
           stockApi.getAllStocks(),
-          alertApi.getAllAlerts('user-123') // Using mock user ID
+          alertApi.getAllAlerts() // Now uses authenticated user
         ]);
-        setStocks(stocksData);
-        setAlerts(alertsData);
+        setStocks(stocksData || []);
+        setAlerts(alertsData || []);
         // Set the first stock as default for chart
         if (stocksData.length > 0 && !selectedChartStock) {
           setSelectedChartStock(stocksData[0].symbol);
@@ -197,12 +208,17 @@ const Dashboard: React.FC = () => {
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack>
             <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+              <DashboardIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
               Shares Alert Ghana
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
-              Welcome back, {mockStore.user.name}
+              Welcome back, {user?.name}
             </Typography>
           </Stack>
+          <UserMenu 
+            onOpenSettings={() => setNotificationSettingsOpen(true)}
+            onOpenNotifications={() => setNotificationSettingsOpen(true)}
+          />
         </Stack>
 
         {/* Navigation Tabs */}
@@ -317,16 +333,7 @@ const Dashboard: React.FC = () => {
         </TabPanel>
 
         <TabPanel value={currentTab} index={3}>
-          <Stack spacing={3}>
-            <Typography variant="h6" component="h2">
-              Profile Settings
-            </Typography>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="body1">
-                Profile management features coming soon...
-              </Typography>
-            </Paper>
-          </Stack>
+          <UserProfile />
         </TabPanel>
       </Stack>
 

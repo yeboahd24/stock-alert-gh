@@ -21,7 +21,12 @@ services:
   - type: web
     name: stock-alert-gh
     env: static
-    buildCommand: VITE_API_URL=https://stock-alert-gh-backend.onrender.com/api/v1 npm ci && npm run build
+    # If your frontend code is in a subdirectory (e.g., 'frontend'), specify it here.
+    # rootDir: frontend
+    buildCommand: npm ci && npm run build
     staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://stock-alert-gh-backend.onrender.com/api/v1
         
 databases: []

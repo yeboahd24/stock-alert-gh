@@ -14,9 +14,9 @@ export const getAuthToken = () => authToken;
 const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
   const token = authToken || localStorage.getItem('auth_token');
   
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string> || {}),
   };
 
   if (token) {

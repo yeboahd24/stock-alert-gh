@@ -48,7 +48,6 @@ const Dashboard: React.FC = () => {
   const { user, token } = useAuth();
   const [currentTab, setCurrentTab] = useState(0);
   const [alertFormOpen, setAlertFormOpen] = useState(false);
-  const [notificationSettingsOpen, setNotificationSettingsOpen] = useState(false);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [alerts, setAlerts] = useState<ApiAlert[]>([]);
   const [loading, setLoading] = useState(true);
@@ -216,8 +215,8 @@ const Dashboard: React.FC = () => {
             </Typography>
           </Stack>
           <UserMenu 
-            onOpenSettings={() => setNotificationSettingsOpen(true)}
-            onOpenNotifications={() => setNotificationSettingsOpen(true)}
+            onOpenSettings={() => setCurrentTab(2)}
+            onOpenNotifications={() => setCurrentTab(2)}
           />
         </Stack>
 

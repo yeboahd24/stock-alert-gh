@@ -3,8 +3,9 @@ services:
   - type: web
     name: stock-alert-gh-backend
     env: go
-    buildCommand: cd backend && go build -o main .
-    startCommand: cd backend && ./main
+    rootDir: backend
+    buildCommand: go build -o main .
+    startCommand: ./main
     envVars:
       - key: PORT
         value: 10000

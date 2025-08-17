@@ -21,10 +21,7 @@ services:
   - type: web
     name: stock-alert-gh
     env: static
-    buildCommand: npm ci && npm run build
+    buildCommand: VITE_API_URL=https://stock-alert-gh-backend.onrender.com/api/v1 npm ci && npm run build
     staticPublishPath: ./dist
-    envVars:
-      - key: VITE_API_URL
-        value: https://stock-alert-gh-backend.onrender.com/api/v1
         
 databases: []

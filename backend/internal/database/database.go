@@ -77,11 +77,24 @@ func New(cfg *config.DatabaseConfig) (*DB, error) {
 }
 
 func (db *DB) Migrate() error {
-	migrations := []string{
-		createUsersTable,
-		createUserPreferencesTable,
-		createAlertsTable,
-		createIndexes,
+	var migrations []string
+	
+	// Use different migrations based on database type
+	switch db.config.Type {
+	case "postgres":
+		migrations = []string{
+			createUsersTablePostgres,
+			createUserPreferencesTablePostgres,
+			createAlertsTablePostgres,
+			createIndexesPostgres,
+		}
+	default: // sqlite
+		migrations = []string{
+			createUsersTable,
+			createUserPreferencesTable,
+			createAlertsTable,
+			createIndexes,
+		}
 	}
 
 	for i, migration := range migrations {
@@ -135,6 +148,56 @@ CREATE TABLE IF NOT EXISTS alerts (
 );`
 
 const createIndexes = `
+CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON alerts(user_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
+CREATE INDEX IF NOT EXISTS idx_alerts_stock_symbol ON alerts(stock_symbol);
+CREATE INDEX IF NOT EXISTS idx_alerts_alert_type ON alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+`
+
+// PostgreSQL-specific table definitions
+const createUsersTablePostgres = `
+CREATE TABLE IF NOT EXISTS users (
+	id TEXT PRIMARY KEY,
+	email TEXT UNIQUE NOT NULL,
+	name TEXT NOT NULL,
+	picture TEXT,
+	google_id TEXT UNIQUE NOT NULL,
+	email_verified BOOLEAN DEFAULT FALSE,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`
+
+const createUserPreferencesTablePostgres = `
+CREATE TABLE IF NOT EXISTS user_preferences (
+	id TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL,
+	email_notifications BOOLEAN DEFAULT TRUE,
+	push_notifications BOOLEAN DEFAULT TRUE,
+	notification_frequency TEXT DEFAULT 'immediate',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);`
+
+const createAlertsTablePostgres = `
+CREATE TABLE IF NOT EXISTS alerts (
+	id TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL,
+	stock_symbol TEXT NOT NULL,
+	stock_name TEXT NOT NULL,
+	alert_type TEXT NOT NULL,
+	threshold_price REAL,
+	current_price REAL,
+	status TEXT DEFAULT 'active',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	triggered_at TIMESTAMP,
+	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);`
+
+const createIndexesPostgres = `
 CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON alerts(user_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
 CREATE INDEX IF NOT EXISTS idx_alerts_stock_symbol ON alerts(stock_symbol);

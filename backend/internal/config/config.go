@@ -1,8 +1,10 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -75,16 +77,7 @@ func Load() (*Config, error) {
 			},
 			RequestTimeout: getEnvAsInt("REQUEST_TIMEOUT", 60),
 		},
-		Database: DatabaseConfig{
-			Type:     getEnv("DB_TYPE", "sqlite"),
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "5432"),
-			Name:     getEnv("DB_NAME", "shares_alert"),
-			User:     getEnv("DB_USER", ""),
-			Password: getEnv("DB_PASSWORD", ""),
-			SSLMode:  getEnv("DB_SSL_MODE", "disable"),
-			FilePath: getEnv("DB_FILE_PATH", "./data/shares_alert.db"),
-		},
+		Database: loadDatabaseConfig(),
 		Auth: AuthConfig{
 			GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 			GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
@@ -139,4 +132,68 @@ func getEnvAsBool(key string, defaultValue bool) bool {
 		}
 	}
 	return defaultValue
+}
+
+func loadDatabaseConfig() DatabaseConfig {
+	// Primary: Use individual environment variables (more secure)
+	config := DatabaseConfig{
+		Type:     getEnv("DB_TYPE", "sqlite"),
+		Host:     getEnv("DB_HOST", "localhost"),
+		Port:     getEnv("DB_PORT", "5432"),
+		Name:     getEnv("DB_NAME", "shares_alert"),
+		User:     getEnv("DB_USER", ""),
+		Password: getEnv("DB_PASSWORD", ""),
+		SSLMode:  getEnv("DB_SSL_MODE", "disable"),
+		FilePath: getEnv("DB_FILE_PATH", "./data/shares_alert.db"),
+	}
+
+	// Fallback: Check if DATABASE_URL is provided (for compatibility)
+	if databaseURL := getEnv("DATABASE_URL", ""); databaseURL != "" && config.Type == "sqlite" {
+		return parseDatabaseURL(databaseURL)
+	}
+
+	return config
+}
+
+func parseDatabaseURL(databaseURL string) DatabaseConfig {
+	u, err := url.Parse(databaseURL)
+	if err != nil {
+		// Fallback to default config if URL parsing fails
+		return DatabaseConfig{
+			Type:     "sqlite",
+			FilePath: "./data/shares_alert.db",
+		}
+	}
+
+	config := DatabaseConfig{
+		Type:    u.Scheme,
+		Host:    u.Hostname(),
+		Port:    u.Port(),
+		Name:    strings.TrimPrefix(u.Path, "/"),
+		SSLMode: "require", // Default for cloud databases
+	}
+
+	if u.User != nil {
+		config.User = u.User.Username()
+		if password, ok := u.User.Password(); ok {
+			config.Password = password
+		}
+	}
+
+	// Handle PostgreSQL scheme variations
+	if config.Type == "postgresql" {
+		config.Type = "postgres"
+	}
+
+	// Set default port if not specified
+	if config.Port == "" {
+		switch config.Type {
+		case "postgres":
+			config.Port = "5432"
+		case "mysql":
+			config.Port = "3306"
+		}
+	}
+
+	return config
 }

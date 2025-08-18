@@ -15,6 +15,20 @@ services:
         value: https://stock-alert-gh.onrender.com/
       - key: FRONTEND_URL
         value: https://stock-alert-gh.onrender.com
+      - key: DB_TYPE
+        value: postgres
+      - key: DB_HOST
+        value: pg-33939283-yeboahd24-ef10.f.aivencloud.com
+      - key: DB_PORT
+        value: 15450
+      - key: DB_NAME
+        value: defaultdb
+      - key: DB_USER
+        value: avnadmin
+      # DB_PASSWORD should be added via Render Dashboard Environment Variables
+      # for security - do not commit passwords to git
+      - key: DB_SSL_MODE
+        value: require
     healthCheckPath: /api/v1/health
     
   # Frontend Service  

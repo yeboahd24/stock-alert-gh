@@ -170,30 +170,48 @@ CREATE TABLE IF NOT EXISTS users (
 );`
 
 const createUserPreferencesTablePostgres = `
-CREATE TABLE IF NOT EXISTS user_preferences (
-	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	email_notifications BOOLEAN DEFAULT TRUE,
-	push_notifications BOOLEAN DEFAULT TRUE,
-	notification_frequency TEXT DEFAULT 'immediate',
-	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);`
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_preferences') THEN
+        CREATE TABLE user_preferences (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            email_notifications BOOLEAN DEFAULT TRUE,
+            push_notifications BOOLEAN DEFAULT TRUE,
+            notification_frequency TEXT DEFAULT 'immediate',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        
+        ALTER TABLE user_preferences 
+        ADD CONSTRAINT user_preferences_user_id_fkey 
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+END $$;`
 
 const createAlertsTablePostgres = `
-CREATE TABLE IF NOT EXISTS alerts (
-	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-	stock_symbol TEXT NOT NULL,
-	stock_name TEXT NOT NULL,
-	alert_type TEXT NOT NULL,
-	threshold_price REAL,
-	current_price REAL,
-	status TEXT DEFAULT 'active',
-	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	triggered_at TIMESTAMP
-);`
+DO $$ 
+BEGIN
+    IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alerts') THEN
+        CREATE TABLE alerts (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            stock_symbol TEXT NOT NULL,
+            stock_name TEXT NOT NULL,
+            alert_type TEXT NOT NULL,
+            threshold_price REAL,
+            current_price REAL,
+            status TEXT DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            triggered_at TIMESTAMP
+        );
+        
+        ALTER TABLE alerts 
+        ADD CONSTRAINT alerts_user_id_fkey 
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+    END IF;
+END $$;`
 
 const createIndexesPostgres = `
 CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON alerts(user_id);

@@ -172,19 +172,18 @@ CREATE TABLE IF NOT EXISTS users (
 const createUserPreferencesTablePostgres = `
 CREATE TABLE IF NOT EXISTS user_preferences (
 	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL,
+	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 	email_notifications BOOLEAN DEFAULT TRUE,
 	push_notifications BOOLEAN DEFAULT TRUE,
 	notification_frequency TEXT DEFAULT 'immediate',
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );`
 
 const createAlertsTablePostgres = `
 CREATE TABLE IF NOT EXISTS alerts (
 	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL,
+	user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 	stock_symbol TEXT NOT NULL,
 	stock_name TEXT NOT NULL,
 	alert_type TEXT NOT NULL,
@@ -193,8 +192,7 @@ CREATE TABLE IF NOT EXISTS alerts (
 	status TEXT DEFAULT 'active',
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-	triggered_at TIMESTAMP,
-	FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	triggered_at TIMESTAMP
 );`
 
 const createIndexesPostgres = `

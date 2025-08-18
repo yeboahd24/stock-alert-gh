@@ -47,4 +47,10 @@ DB_SSL_MODE=require
 2. Restart backend service manually
 3. Verify alerts persist (they will!)
 
+## ✅ Database Schema Fixed
+- Updated migrations to use PostgreSQL-compatible syntax
+- Changed DATETIME to TIMESTAMP for PostgreSQL
+- Fixed foreign key constraints for PostgreSQL
+- Maintains backward compatibility with SQLite
+
 Your alerts will never disappear again! 🎉

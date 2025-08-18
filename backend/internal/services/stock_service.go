@@ -10,6 +10,7 @@ import (
 
 	"shares-alert-backend/internal/cache"
 	"shares-alert-backend/internal/config"
+	"shares-alert-backend/internal/httpclient"
 	"shares-alert-backend/internal/models"
 )
 
@@ -22,12 +23,10 @@ type StockService struct {
 
 func NewStockService(cfg *config.ExternalConfig, redisCache *cache.RedisCache, cacheTTL time.Duration) *StockService {
 	return &StockService{
-		config:   cfg,
-		cache:    redisCache,
-		cacheTTL: cacheTTL,
-		httpClient: &http.Client{
-			Timeout: 20 * time.Second,
-		},
+		config:     cfg,
+		cache:      redisCache,
+		cacheTTL:   cacheTTL,
+		httpClient: httpclient.CreateClientWithTimeout(20 * time.Second),
 	}
 }
 

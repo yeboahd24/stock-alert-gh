@@ -17,7 +17,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Create(user *models.User) error {
 	query := `
-		INSERT INTO users (id, email, name, picture, google_id, email_verified, created_at, updated_at)
+		INSERT INTO shares_alert_users (id, email, name, picture, google_id, email_verified, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.Exec(query, user.ID, user.Email, user.Name, user.Picture, 
@@ -28,7 +28,7 @@ func (r *UserRepository) Create(user *models.User) error {
 func (r *UserRepository) GetByID(id string) (*models.User, error) {
 	query := `
 		SELECT id, email, name, picture, google_id, email_verified, created_at, updated_at
-		FROM users WHERE id = ?
+		FROM shares_alert_users WHERE id = ?
 	`
 	user := &models.User{}
 	err := r.db.QueryRow(query, id).Scan(
@@ -44,7 +44,7 @@ func (r *UserRepository) GetByID(id string) (*models.User, error) {
 func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	query := `
 		SELECT id, email, name, picture, google_id, email_verified, created_at, updated_at
-		FROM users WHERE email = ?
+		FROM shares_alert_users WHERE email = ?
 	`
 	user := &models.User{}
 	err := r.db.QueryRow(query, email).Scan(
@@ -60,7 +60,7 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 func (r *UserRepository) GetByGoogleID(googleID string) (*models.User, error) {
 	query := `
 		SELECT id, email, name, picture, google_id, email_verified, created_at, updated_at
-		FROM users WHERE google_id = ?
+		FROM shares_alert_users WHERE google_id = ?
 	`
 	user := &models.User{}
 	err := r.db.QueryRow(query, googleID).Scan(
@@ -75,7 +75,7 @@ func (r *UserRepository) GetByGoogleID(googleID string) (*models.User, error) {
 
 func (r *UserRepository) Update(user *models.User) error {
 	query := `
-		UPDATE users 
+		UPDATE shares_alert_users 
 		SET email = ?, name = ?, picture = ?, email_verified = ?, updated_at = ?
 		WHERE id = ?
 	`
@@ -86,7 +86,7 @@ func (r *UserRepository) Update(user *models.User) error {
 }
 
 func (r *UserRepository) Delete(id string) error {
-	query := `DELETE FROM users WHERE id = ?`
+	query := `DELETE FROM shares_alert_users WHERE id = ?`
 	_, err := r.db.Exec(query, id)
 	return err
 }

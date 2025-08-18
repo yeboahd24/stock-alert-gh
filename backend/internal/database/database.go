@@ -158,7 +158,7 @@ CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 
 // PostgreSQL-specific table definitions
 const createUsersTablePostgres = `
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS shares_alert_users (
 	id TEXT PRIMARY KEY,
 	email TEXT UNIQUE NOT NULL,
 	name TEXT NOT NULL,
@@ -170,54 +170,36 @@ CREATE TABLE IF NOT EXISTS users (
 );`
 
 const createUserPreferencesTablePostgres = `
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'user_preferences') THEN
-        CREATE TABLE user_preferences (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            email_notifications BOOLEAN DEFAULT TRUE,
-            push_notifications BOOLEAN DEFAULT TRUE,
-            notification_frequency TEXT DEFAULT 'immediate',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-        
-        ALTER TABLE user_preferences 
-        ADD CONSTRAINT user_preferences_user_id_fkey 
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-    END IF;
-END $$;`
+CREATE TABLE IF NOT EXISTS shares_alert_user_preferences (
+	id TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL REFERENCES shares_alert_users(id) ON DELETE CASCADE,
+	email_notifications BOOLEAN DEFAULT TRUE,
+	push_notifications BOOLEAN DEFAULT TRUE,
+	notification_frequency TEXT DEFAULT 'immediate',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`
 
 const createAlertsTablePostgres = `
-DO $$ 
-BEGIN
-    IF NOT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alerts') THEN
-        CREATE TABLE alerts (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            stock_symbol TEXT NOT NULL,
-            stock_name TEXT NOT NULL,
-            alert_type TEXT NOT NULL,
-            threshold_price REAL,
-            current_price REAL,
-            status TEXT DEFAULT 'active',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            triggered_at TIMESTAMP
-        );
-        
-        ALTER TABLE alerts 
-        ADD CONSTRAINT alerts_user_id_fkey 
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
-    END IF;
-END $$;`
+CREATE TABLE IF NOT EXISTS shares_alert_alerts (
+	id TEXT PRIMARY KEY,
+	user_id TEXT NOT NULL REFERENCES shares_alert_users(id) ON DELETE CASCADE,
+	stock_symbol TEXT NOT NULL,
+	stock_name TEXT NOT NULL,
+	alert_type TEXT NOT NULL,
+	threshold_price REAL,
+	current_price REAL,
+	status TEXT DEFAULT 'active',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	triggered_at TIMESTAMP
+);`
 
 const createIndexesPostgres = `
-CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON alerts(user_id);
-CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status);
-CREATE INDEX IF NOT EXISTS idx_alerts_stock_symbol ON alerts(stock_symbol);
-CREATE INDEX IF NOT EXISTS idx_alerts_alert_type ON alerts(alert_type);
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_user_id ON shares_alert_alerts(user_id);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_status ON shares_alert_alerts(status);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_stock_symbol ON shares_alert_alerts(stock_symbol);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_alert_type ON shares_alert_alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_users_email ON shares_alert_users(email);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_users_google_id ON shares_alert_users(google_id);
 `

@@ -19,7 +19,7 @@ func NewAlertRepository(db *sql.DB) *AlertRepository {
 
 func (r *AlertRepository) Create(alert *models.Alert) error {
 	query := `
-		INSERT INTO alerts (id, user_id, stock_symbol, stock_name, alert_type, 
+		INSERT INTO shares_alert_alerts (id, user_id, stock_symbol, stock_name, alert_type, 
 			threshold_price, current_price, status, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
@@ -33,7 +33,7 @@ func (r *AlertRepository) GetByID(id string) (*models.Alert, error) {
 	query := `
 		SELECT id, user_id, stock_symbol, stock_name, alert_type, threshold_price,
 			current_price, status, created_at, updated_at, triggered_at
-		FROM alerts WHERE id = ?
+		FROM shares_alert_alerts WHERE id = ?
 	`
 	alert := &models.Alert{}
 	err := r.db.QueryRow(query, id).Scan(
@@ -51,7 +51,7 @@ func (r *AlertRepository) GetByUserID(userID string, filters map[string]interfac
 	query := `
 		SELECT id, user_id, stock_symbol, stock_name, alert_type, threshold_price,
 			current_price, status, created_at, updated_at, triggered_at
-		FROM alerts WHERE user_id = ?
+		FROM shares_alert_alerts WHERE user_id = ?
 	`
 	args := []interface{}{userID}
 
@@ -98,7 +98,7 @@ func (r *AlertRepository) GetActiveAlerts() ([]*models.Alert, error) {
 	query := `
 		SELECT id, user_id, stock_symbol, stock_name, alert_type, threshold_price,
 			current_price, status, created_at, updated_at, triggered_at
-		FROM alerts WHERE status = ?
+		FROM shares_alert_alerts WHERE status = ?
 		ORDER BY created_at DESC
 	`
 	rows, err := r.db.Query(query, models.AlertStatusActive)
@@ -155,20 +155,20 @@ func (r *AlertRepository) Update(alert *models.Alert) error {
 
 	args = append(args, alert.ID)
 
-	query := fmt.Sprintf("UPDATE alerts SET %s WHERE id = ?", strings.Join(setParts, ", "))
+	query := fmt.Sprintf("UPDATE shares_alert_alerts SET %s WHERE id = ?", strings.Join(setParts, ", "))
 	_, err := r.db.Exec(query, args...)
 	return err
 }
 
 func (r *AlertRepository) Delete(id string) error {
-	query := `DELETE FROM alerts WHERE id = ?`
+	query := `DELETE FROM shares_alert_alerts WHERE id = ?`
 	_, err := r.db.Exec(query, id)
 	return err
 }
 
 func (r *AlertRepository) UpdateCurrentPrice(stockSymbol string, currentPrice float64) error {
 	query := `
-		UPDATE alerts 
+		UPDATE shares_alert_alerts 
 		SET current_price = ?, updated_at = ?
 		WHERE stock_symbol = ? AND status = ?
 	`
@@ -179,7 +179,7 @@ func (r *AlertRepository) UpdateCurrentPrice(stockSymbol string, currentPrice fl
 func (r *AlertRepository) TriggerAlert(alertID string) error {
 	now := time.Now()
 	query := `
-		UPDATE alerts 
+		UPDATE shares_alert_alerts 
 		SET status = ?, triggered_at = ?, updated_at = ?
 		WHERE id = ?
 	`

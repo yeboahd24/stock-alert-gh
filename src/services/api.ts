@@ -1,5 +1,25 @@
 // API service for communicating with the Go backend
-const API_BASE_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:10000/api/v1';
+const getApiBaseUrl = () => {
+  // Check for environment variable first
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Fallback for production deployment
+  if (import.meta.env.PROD) {
+    return 'https://stock-alert-gh-backend.onrender.com/api/v1';
+  }
+  
+  // Development fallback
+  return 'http://localhost:10000/api/v1';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+
+// Debug: Log the API URL being used
+console.log('API Base URL:', API_BASE_URL);
+console.log('VITE_API_URL env var:', import.meta.env.VITE_API_URL);
+console.log('Production mode:', import.meta.env.PROD);
 
 // Auth token management
 let authToken: string | null = null;

@@ -16,6 +16,7 @@ type RedisCache struct {
 }
 
 type CacheConfig struct {
+	URL      string
 	Host     string
 	Port     string
 	Password string
@@ -29,11 +30,26 @@ func NewRedisCache(cfg *CacheConfig) (*RedisCache, error) {
 		return &RedisCache{ctx: context.Background()}, nil
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Host + ":" + cfg.Port,
-		Password: cfg.Password,
-		DB:       cfg.DB,
-	})
+	var rdb *redis.Client
+	
+	// Use REDIS_URL if provided, otherwise fall back to individual parameters
+	if cfg.URL != "" {
+		opt, err := redis.ParseURL(cfg.URL)
+		if err != nil {
+			log.Printf("Failed to parse Redis URL: %v", err)
+			log.Println("Continuing without Redis cache...")
+			return &RedisCache{ctx: context.Background()}, nil
+		}
+		rdb = redis.NewClient(opt)
+		log.Printf("Using Redis URL connection")
+	} else {
+		rdb = redis.NewClient(&redis.Options{
+			Addr:     cfg.Host + ":" + cfg.Port,
+			Password: cfg.Password,
+			DB:       cfg.DB,
+		})
+		log.Printf("Using Redis individual parameters: %s:%s", cfg.Host, cfg.Port)
+	}
 
 	ctx := context.Background()
 
@@ -45,7 +61,7 @@ func NewRedisCache(cfg *CacheConfig) (*RedisCache, error) {
 		return &RedisCache{ctx: ctx}, nil
 	}
 
-	log.Printf("Connected to Redis at %s:%s", cfg.Host, cfg.Port)
+	log.Printf("Successfully connected to Redis")
 	return &RedisCache{
 		client: rdb,
 		ctx:    ctx,

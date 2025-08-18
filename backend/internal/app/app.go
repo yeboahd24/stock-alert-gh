@@ -35,6 +35,7 @@ func New(cfg *config.Config) (*App, error) {
 
 	// Initialize Redis cache
 	redisCache, err := cache.NewRedisCache(&cache.CacheConfig{
+		URL:      cfg.Cache.URL,
 		Host:     cfg.Cache.Host,
 		Port:     cfg.Cache.Port,
 		Password: cfg.Cache.Password,

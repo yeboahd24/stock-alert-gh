@@ -54,11 +54,12 @@ type ExternalConfig struct {
 }
 
 type CacheConfig struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
-	Enabled  bool
+	URL       string
+	Host      string
+	Port      string
+	Password  string
+	DB        int
+	Enabled   bool
 	StockCacheTTL int // in minutes
 }
 
@@ -104,6 +105,7 @@ func Load() (*Config, error) {
 			ProxyURL:   getEnv("PROXY_URL", "https://api.allorigins.win/raw?url="),
 		},
 		Cache: CacheConfig{
+			URL:           getEnv("REDIS_URL", ""),
 			Host:          getEnv("REDIS_HOST", "localhost"),
 			Port:          getEnv("REDIS_PORT", "6379"),
 			Password:      getEnv("REDIS_PASSWORD", ""),

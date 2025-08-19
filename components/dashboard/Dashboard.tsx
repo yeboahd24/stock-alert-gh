@@ -40,6 +40,7 @@ import FilterChips from '../common/FilterChips';
 import TechnicalIndicators from '../charts/TechnicalIndicators';
 import MarketSummary from '../market/MarketSummary';
 import TopMovers from '../market/TopMovers';
+import Footer from '../common/Footer';
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(3),
@@ -245,8 +246,9 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <StyledContainer maxWidth="lg">
-      <Stack spacing={3}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <StyledContainer maxWidth="lg" sx={{ flex: 1 }}>
+        <Stack spacing={3}>
         {/* Header */}
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack>
@@ -454,7 +456,9 @@ const Dashboard: React.FC = () => {
           {snackbar.message}
         </Alert>
       </Snackbar>
-    </StyledContainer>
+      </StyledContainer>
+      <Footer />
+    </Box>
   );
 };
 

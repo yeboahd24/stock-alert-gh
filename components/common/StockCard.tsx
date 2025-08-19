@@ -8,6 +8,9 @@ import { formatPrice, formatPercentage } from '../../utils/formatters';
 import StockDetailsModal from './StockDetailsModal';
 
 const StyledCard = styled(Card)(({ theme }) => ({
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
   transition: 'all 0.2s ease-in-out',
   '&:hover': {
     transform: 'translateY(-2px)',
@@ -48,8 +51,8 @@ const StockCard: React.FC<StockCardProps> = ({
   return (
     <>
       <StyledCard>
-        <CardActionArea onClick={() => setDetailsModalOpen(true)}>
-          <CardContent>
+        <CardActionArea onClick={() => setDetailsModalOpen(true)} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
           <Stack>
             <Typography variant="h6" component="h3" sx={{ fontWeight: 'bold' }}>

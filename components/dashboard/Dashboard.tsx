@@ -32,10 +32,12 @@ import { stockApi, alertApi, Stock, Alert as ApiAlert, setAuthToken } from '../.
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useWebSocket, useStockUpdates } from '../../src/hooks/useWebSocket';
 import { useStockSearch, useAlertFilter } from '../../src/hooks/useSearch';
+import { useTechnicalIndicators } from '../../src/hooks/useTechnicalIndicators';
 import UserMenu from '../common/UserMenu';
 import UserProfile from '../profile/UserProfile';
 import SearchBar from '../common/SearchBar';
 import FilterChips from '../common/FilterChips';
+import TechnicalIndicators from '../charts/TechnicalIndicators';
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(3),
@@ -295,6 +297,22 @@ const Dashboard: React.FC = () => {
                 )}
               </Stack>
             </Stack>
+
+            {/* Technical Indicators */}
+            {stocks.length > 0 && selectedChartStock && (() => {
+              const selectedStock = stocks.find(s => s.symbol === selectedChartStock) || stocks[0];
+              const indicators = useTechnicalIndicators(
+                selectedStock.currentPrice,
+                selectedStock.volume,
+                selectedStock.symbol
+              );
+              return (
+                <TechnicalIndicators
+                  indicators={indicators}
+                  symbol={selectedStock.symbol}
+                />
+              );
+            })()}
 
             {/* Chart */}
             <Stack spacing={2}>

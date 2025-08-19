@@ -38,6 +38,8 @@ import UserProfile from '../profile/UserProfile';
 import SearchBar from '../common/SearchBar';
 import FilterChips from '../common/FilterChips';
 import TechnicalIndicators from '../charts/TechnicalIndicators';
+import MarketSummary from '../market/MarketSummary';
+import TopMovers from '../market/TopMovers';
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(3),
@@ -275,6 +277,22 @@ const Dashboard: React.FC = () => {
         {/* Tab Panels */}
         <TabPanel value={currentTab} index={0}>
           <Stack spacing={3}>
+            {/* Market Summary */}
+            {stocks.length > 0 && (
+              <MarketSummary stocks={stocks} />
+            )}
+
+            {/* Top Movers */}
+            {stocks.length > 0 && (
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                <Box flex={1}>
+                  <TopMovers stocks={stocks} type="gainers" />
+                </Box>
+                <Box flex={1}>
+                  <TopMovers stocks={stocks} type="losers" />
+                </Box>
+              </Stack>
+            )}
             {/* Stock Cards Grid */}
             <Stack spacing={2}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">

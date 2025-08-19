@@ -10,8 +10,8 @@ class WebSocketService {
   private reconnectDelay = 1000;
 
   connect() {
-    const wsUrl = import.meta.env.VITE_API_URL?.replace('http', 'ws').replace('/api/v1', '/api/v1/ws') || 
-                  'ws://localhost:8080/api/v1/ws';
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://stock-alert-gh-backend.onrender.com/api/v1';
+    const wsUrl = apiUrl.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws';
     
     try {
       this.ws = new WebSocket(wsUrl);

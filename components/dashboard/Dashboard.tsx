@@ -50,6 +50,21 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
   </div>
 );
 
+const TechnicalIndicatorsWrapper: React.FC<{ stock: Stock }> = ({ stock }) => {
+  const indicators = useTechnicalIndicators(
+    stock.currentPrice,
+    stock.volume,
+    stock.symbol
+  );
+  
+  return (
+    <TechnicalIndicators
+      indicators={indicators}
+      symbol={stock.symbol}
+    />
+  );
+};
+
 const Dashboard: React.FC = () => {
   const { user, token } = useAuth();
   const { isConnected } = useWebSocket();
@@ -301,15 +316,9 @@ const Dashboard: React.FC = () => {
             {/* Technical Indicators */}
             {stocks.length > 0 && selectedChartStock && (() => {
               const selectedStock = stocks.find(s => s.symbol === selectedChartStock) || stocks[0];
-              const indicators = useTechnicalIndicators(
-                selectedStock.currentPrice,
-                selectedStock.volume,
-                selectedStock.symbol
-              );
               return (
-                <TechnicalIndicators
-                  indicators={indicators}
-                  symbol={selectedStock.symbol}
+                <TechnicalIndicatorsWrapper
+                  stock={selectedStock}
                 />
               );
             })()}

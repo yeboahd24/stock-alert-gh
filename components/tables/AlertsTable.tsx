@@ -99,7 +99,7 @@ const AlertsTable: React.FC<AlertsTableProps> = ({ alerts, onEdit, onDelete }) =
               <TableRow>
                 <TableCell colSpan={7} align="center">
                   <Typography color="text.secondary" sx={{ py: 4 }}>
-                    No alerts found
+                    {alerts.length === 0 ? 'No alerts created yet' : 'No alerts match the current filter'}
                   </Typography>
                 </TableCell>
               </TableRow>

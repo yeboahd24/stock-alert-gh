@@ -30,8 +30,12 @@ import AlertsTable from '../tables/AlertsTable';
 import { AlertType, AlertStatus } from '../../types/enums';
 import { stockApi, alertApi, Stock, Alert as ApiAlert, setAuthToken } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useWebSocket, useStockUpdates } from '../../src/hooks/useWebSocket';
+import { useStockSearch, useAlertFilter } from '../../src/hooks/useSearch';
 import UserMenu from '../common/UserMenu';
 import UserProfile from '../profile/UserProfile';
+import SearchBar from '../common/SearchBar';
+import FilterChips from '../common/FilterChips';
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(3),
@@ -46,6 +50,7 @@ const TabPanel = ({ children, value, index }: { children: React.ReactNode; value
 
 const Dashboard: React.FC = () => {
   const { user, token } = useAuth();
+  const { isConnected } = useWebSocket();
   const [currentTab, setCurrentTab] = useState(0);
   const [alertFormOpen, setAlertFormOpen] = useState(false);
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -57,6 +62,26 @@ const Dashboard: React.FC = () => {
     message: '',
     severity: 'success',
   });
+  const [stockSearch, setStockSearch] = useState('');
+  const [alertFilter, setAlertFilter] = useState('all');
+
+  // Handle real-time stock updates
+  useStockUpdates((updatedStocks: Stock[]) => {
+    setStocks(updatedStocks);
+  });
+
+  // Filter stocks and alerts using optimized hooks
+  const filteredStocks = useStockSearch(stocks, stockSearch);
+  const filteredAlerts = useAlertFilter(alerts, alertFilter);
+
+  // Alert filter options
+  const alertFilters = [
+    { label: 'All', value: 'all', active: alertFilter === 'all' },
+    { label: 'Active', value: 'active', active: alertFilter === 'active' },
+    { label: 'Triggered', value: 'triggered', active: alertFilter === 'triggered' },
+    { label: 'Price Above', value: 'price_above', active: alertFilter === 'price_above' },
+    { label: 'Price Below', value: 'price_below', active: alertFilter === 'price_below' },
+  ];
 
   // Set auth token when component mounts
   useEffect(() => {
@@ -211,7 +236,7 @@ const Dashboard: React.FC = () => {
               Shares Alert Ghana
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
-              Welcome back, {user?.name}
+              Welcome back, {user?.name} {isConnected && '🟢 Live'}
             </Typography>
           </Stack>
           <UserMenu 
@@ -235,14 +260,23 @@ const Dashboard: React.FC = () => {
           <Stack spacing={3}>
             {/* Stock Cards Grid */}
             <Stack spacing={2}>
-              <Typography variant="h6" component="h2">
-                Your Watchlist
-              </Typography>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Typography variant="h6" component="h2">
+                  Your Watchlist
+                </Typography>
+                <Box sx={{ width: 300 }}>
+                  <SearchBar
+                    value={stockSearch}
+                    onChange={setStockSearch}
+                    placeholder="Search stocks..."
+                  />
+                </Box>
+              </Stack>
               <Stack direction="row" spacing={2} sx={{ overflowX: 'auto', pb: 1 }}>
                 {loading ? (
                   <Typography>Loading stocks...</Typography>
-                ) : (
-                  stocks.map((stock) => (
+                ) : filteredStocks.length > 0 ? (
+                  filteredStocks.map((stock) => (
                     <Box key={stock.symbol} sx={{ minWidth: 300 }}>
                       <StockCard
                         symbol={stock.symbol}
@@ -256,6 +290,8 @@ const Dashboard: React.FC = () => {
                       />
                     </Box>
                   ))
+                ) : (
+                  <Typography color="text.secondary">No stocks found matching "{stockSearch}"</Typography>
                 )}
               </Stack>
             </Stack>
@@ -300,7 +336,7 @@ const Dashboard: React.FC = () => {
           <Stack spacing={3}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Typography variant="h6" component="h2">
-                My Alerts
+                My Alerts ({filteredAlerts.length})
               </Typography>
               <Button
                 variant="contained"
@@ -310,8 +346,12 @@ const Dashboard: React.FC = () => {
                 Create Alert
               </Button>
             </Stack>
+            <FilterChips
+              filters={alertFilters}
+              onFilterChange={setAlertFilter}
+            />
             <AlertsTable
-              alerts={alerts.map(alert => ({
+              alerts={filteredAlerts.map(alert => ({
                 ...alert,
                 status: alert.status as AlertStatus,
                 alertType: alert.alertType as AlertType,

@@ -1,3 +1,5 @@
+import { cache } from './cache';
+
 // API service for communicating with the Go backend
 const getApiBaseUrl = (): string => {
   // Check for environment variable first
@@ -230,6 +232,10 @@ export const userApi = {
 export const stockApi = {
   // Get all stocks
   getAllStocks: async (): Promise<Stock[]> => {
+    const cacheKey = 'stocks:all';
+    const cached = cache.get<Stock[]>(cacheKey);
+    if (cached) return cached;
+
     console.log('Fetching stocks from:', `${API_BASE_URL}/stocks`);
     try {
       const response = await fetch(`${API_BASE_URL}/stocks`);
@@ -239,6 +245,7 @@ export const stockApi = {
       }
       const data = await response.json();
       console.log('Stocks data received:', data.length, 'stocks');
+      cache.set(cacheKey, data, 2); // Cache for 2 minutes
       return data;
     } catch (error) {
       console.error('Error in getAllStocks:', error);
@@ -248,20 +255,32 @@ export const stockApi = {
 
   // Get specific stock
   getStock: async (symbol: string): Promise<Stock> => {
+    const cacheKey = `stock:${symbol}`;
+    const cached = cache.get<Stock>(cacheKey);
+    if (cached) return cached;
+
     const response = await fetch(`${API_BASE_URL}/stocks/${symbol}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch stock ${symbol}`);
     }
-    return response.json();
+    const data = await response.json();
+    cache.set(cacheKey, data, 1); // Cache for 1 minute
+    return data;
   },
 
   // Get stock details
   getStockDetails: async (symbol: string): Promise<DetailedStock> => {
+    const cacheKey = `stock:details:${symbol}`;
+    const cached = cache.get<DetailedStock>(cacheKey);
+    if (cached) return cached;
+
     const response = await fetch(`${API_BASE_URL}/stocks/${symbol}/details`);
     if (!response.ok) {
       throw new Error(`Failed to fetch stock details for ${symbol}`);
     }
-    return response.json();
+    const data = await response.json();
+    cache.set(cacheKey, data, 5); // Cache for 5 minutes
+    return data;
   },
 };
 
@@ -269,6 +288,10 @@ export const stockApi = {
 export const alertApi = {
   // Get all alerts (authenticated)
   getAllAlerts: async (status?: string, stockSymbol?: string): Promise<Alert[]> => {
+    const cacheKey = `alerts:${status || 'all'}:${stockSymbol || 'all'}`;
+    const cached = cache.get<Alert[]>(cacheKey);
+    if (cached) return cached;
+
     const params = new URLSearchParams();
     if (status) params.append('status', status);
     if (stockSymbol) params.append('stockSymbol', stockSymbol);
@@ -287,7 +310,9 @@ export const alertApi = {
       }
       const data = await response.json();
       console.log('Alerts data received:', Array.isArray(data) ? data.length : 'not an array', 'alerts');
-      return Array.isArray(data) ? data : [];
+      const alerts = Array.isArray(data) ? data : [];
+      cache.set(cacheKey, alerts, 1); // Cache for 1 minute
+      return alerts;
     } catch (error) {
       console.error('Error in getAllAlerts:', error);
       // Return empty array instead of throwing to prevent app crash
@@ -304,7 +329,10 @@ export const alertApi = {
     if (!response.ok) {
       throw new Error('Failed to create alert');
     }
-    return response.json();
+    const data = await response.json();
+    // Clear alerts cache when creating new alert
+    cache.delete('alerts:all:all');
+    return data;
   },
 
   // Get specific alert (authenticated)
@@ -325,7 +353,10 @@ export const alertApi = {
     if (!response.ok) {
       throw new Error(`Failed to update alert ${id}`);
     }
-    return response.json();
+    const data = await response.json();
+    // Clear alerts cache when updating
+    cache.delete('alerts:all:all');
+    return data;
   },
 
   // Delete alert (authenticated)
@@ -336,6 +367,8 @@ export const alertApi = {
     if (!response.ok) {
       throw new Error(`Failed to delete alert ${id}`);
     }
+    // Clear alerts cache when deleting
+    cache.delete('alerts:all:all');
   },
 };
 

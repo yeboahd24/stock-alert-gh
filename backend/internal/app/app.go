@@ -17,6 +17,7 @@ import (
 	"shares-alert-backend/internal/handlers"
 	"shares-alert-backend/internal/repository"
 	"shares-alert-backend/internal/services"
+	"shares-alert-backend/internal/websocket"
 )
 
 type App struct {
@@ -24,6 +25,7 @@ type App struct {
 	db           *database.DB
 	router       *chi.Mux
 	alertService *services.AlertService
+	hub          *websocket.Hub
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -65,18 +67,26 @@ func New(cfg *config.Config) (*App, error) {
 	userHandler := handlers.NewUserHandler(userRepo)
 	cacheHandler := handlers.NewCacheHandler(cacheService, stockService)
 
+	// Initialize WebSocket hub
+	hub := websocket.NewHub()
+	go hub.Run()
+
 	// Setup router
-	router := setupRouter(cfg, authHandler, stockHandler, alertHandler, userHandler, cacheHandler)
+	router := setupRouter(cfg, authHandler, stockHandler, alertHandler, userHandler, cacheHandler, hub)
 
 	app := &App{
 		config:       cfg,
 		db:           db,
 		router:       router,
 		alertService: alertService,
+		hub:          hub,
 	}
 
 	// Start alert monitoring in background
 	go app.alertService.StartMonitoring()
+
+	// Start stock price broadcasting
+	go app.startStockBroadcast(stockService)
 
 	return app, nil
 }
@@ -94,6 +104,7 @@ func setupRouter(
 	alertHandler *handlers.AlertHandler,
 	userHandler *handlers.UserHandler,
 	cacheHandler *handlers.CacheHandler,
+	hub *websocket.Hub,
 ) *chi.Mux {
 	r := chi.NewRouter()
 
@@ -167,7 +178,24 @@ func setupRouter(
 				r.Post("/warmup", cacheHandler.WarmupCache)
 			})
 		})
+
+		// WebSocket endpoint
+		r.Get("/ws", hub.HandleWebSocket)
 	})
 
 	return r
+}
+
+func (a *App) startStockBroadcast(stockService *services.StockService) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		stocks, err := stockService.GetAllStocks()
+		if err != nil {
+			log.Printf("Error fetching stocks for broadcast: %v", err)
+			continue
+		}
+		a.hub.BroadcastStockUpdate(stocks)
+	}
 }

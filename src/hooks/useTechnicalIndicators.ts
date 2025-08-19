@@ -5,8 +5,7 @@ import {
   calculateEMA, 
   calculateVolumeIndicators,
   generateMockHistoricalData,
-  TechnicalIndicators,
-  PriceData
+  TechnicalIndicators
 } from '../../utils/technicalIndicators';
 
 export const useTechnicalIndicators = (

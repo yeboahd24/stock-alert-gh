@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -41,12 +42,23 @@ func NewDividendScraperService(
 }
 
 func (s *DividendScraperService) StartDividendScraping() {
-	ticker := time.NewTicker(24 * time.Hour) // Scrape daily
+	// Check if scraping is enabled via environment variable
+	if os.Getenv("ENABLE_SCRAPING") != "true" {
+		log.Println("Scraping disabled via ENABLE_SCRAPING env var, using mock data only")
+		return
+	}
+
+	// Use longer interval to reduce memory pressure - scrape every 6 hours instead of daily
+	ticker := time.NewTicker(6 * time.Hour)
 	defer ticker.Stop()
 
-	log.Println("Starting dividend scraping service...")
+	log.Println("Starting dividend scraping service (every 6 hours)...")
 
-	// Run once immediately
+	// Wait 5 minutes after startup before first scrape to let app stabilize
+	time.Sleep(5 * time.Minute)
+	
+	// Run initial scrape
+	log.Println("Running initial dividend scraping...")
 	if err := s.ScrapeDividends(); err != nil {
 		log.Printf("Error in initial dividend scraping: %v", err)
 	}
@@ -54,14 +66,31 @@ func (s *DividendScraperService) StartDividendScraping() {
 	for {
 		select {
 		case <-ticker.C:
+			// Force garbage collection before scraping to free memory
+			runtime.GC()
+			
+			log.Println("Starting scheduled dividend scraping...")
 			if err := s.ScrapeDividends(); err != nil {
 				log.Printf("Error scraping dividends: %v", err)
 			}
+			
+			// Force garbage collection after scraping
+			runtime.GC()
+			log.Println("Dividend scraping cycle completed")
 		}
 	}
 }
 
 func (s *DividendScraperService) ScrapeDividends() error {
+	// Check memory before starting
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	if m.Alloc > 300*1024*1024 { // 300MB limit before starting
+		log.Printf("Memory usage too high (%d MB), using mock data instead", m.Alloc/1024/1024)
+		dividendData := s.getMockDividendData()
+		return s.processDividendData(dividendData)
+	}
+	
 	// Try real scraping first, fallback to mock if Chrome not available
 	dividendData, err := s.scrapeRealData()
 	if err != nil {
@@ -72,7 +101,7 @@ func (s *DividendScraperService) ScrapeDividends() error {
 }
 
 func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error) {
-	// Launch browser with rod - Docker-optimized configuration
+	// Launch browser with rod - Ultra memory-optimized configuration
 	l := launcher.New().
 		Headless(true).
 		NoSandbox(true).
@@ -86,7 +115,23 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 		Set("no-first-run").
 		Set("no-zygote").
 		Set("single-process").
-		Set("disable-web-security")
+		Set("disable-web-security").
+		Set("memory-pressure-off").
+		Set("max_old_space_size=128").
+		Set("disable-background-networking").
+		Set("disable-default-apps").
+		Set("disable-sync").
+		Set("disable-plugins").
+		Set("disable-images").
+		Set("disable-javascript").
+		Set("disable-plugins-discovery").
+		Set("disable-preconnect").
+		Set("disable-translate").
+		Set("no-pings").
+		Set("no-referrers").
+		Set("disable-client-side-phishing-detection").
+		Set("disable-component-extensions-with-background-pages").
+		Set("disable-ipc-flooding-protection")
 
 	// Use system Chromium if available (Docker environment)
 	if chromiumPath := os.Getenv("ROD_LAUNCHER_BIN"); chromiumPath != "" {
@@ -104,7 +149,15 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to browser: %w", err)
 	}
-	defer browser.MustClose()
+	
+	// Ensure browser cleanup with explicit close
+	defer func() {
+		if browser != nil {
+			browser.MustClose()
+		}
+		// Force garbage collection after browser cleanup
+		runtime.GC()
+	}()
 
 	// Navigate to page with better error handling
 	page := browser.MustPage()
@@ -113,7 +166,13 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	page = page.MustSetUserAgent(&proto.NetworkSetUserAgentOverride{
 		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 	})
-	defer page.MustClose()
+	
+	// Ensure page cleanup
+	defer func() {
+		if page != nil {
+			page.MustClose()
+		}
+	}()
 
 	err = page.Navigate("https://simplywall.st/stocks/gh/dividend-yield-high")
 	if err != nil {
@@ -126,8 +185,8 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 		return nil, fmt.Errorf("failed to wait for page load: %w", err)
 	}
 
-	// Wait additional time for dynamic content
-	time.Sleep(5 * time.Second)
+	// Minimal wait time to save memory
+	time.Sleep(2 * time.Second)
 
 	// Try multiple selectors to find stock cards
 	var cards rod.Elements
@@ -164,8 +223,18 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	var data []ScrapedDividendData
 
 	for i, card := range cards {
-		if i >= 20 { // Limit to prevent excessive processing
+		if i >= 5 { // Further reduced limit to save memory - only top 5 stocks
 			break
+		}
+		
+		// Check memory usage more frequently
+		if i%2 == 0 {
+			var m runtime.MemStats
+			runtime.ReadMemStats(&m)
+			if m.Alloc > 350*1024*1024 { // Lower 350MB limit
+				log.Printf("Memory usage too high (%d MB), stopping scraping early", m.Alloc/1024/1024)
+				break
+			}
 		}
 
 		// Try multiple ways to extract company name

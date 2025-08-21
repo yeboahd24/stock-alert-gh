@@ -311,3 +311,118 @@ func (s *EmailService) generateIPOListingEmail(userName string, ipo *models.IPOA
 </html>
 `, userName, ipo.CompanyName, ipo.Symbol, ipo.Sector, ipo.OfferPrice, ipo.ListingDate.Format("January 2, 2006"), ipo.CompanyName, ipo.CompanyName), nil
 }
+
+func (s *EmailService) SendDividendAlertEmail(user *models.User, alert *models.Alert, dividend *models.DividendAnnouncement, eventType string) error {
+	if s.config.SMTPUser == "" || s.config.SMTPPassword == "" {
+		return fmt.Errorf("email service not configured")
+	}
+
+	var subject string
+	var body string
+	var err error
+
+	if eventType == "announced" {
+		subject = fmt.Sprintf("Dividend Announced: %s (%s)", dividend.StockName, dividend.StockSymbol)
+		body, err = s.generateDividendAnnouncementEmail(user.Name, dividend)
+	} else {
+		subject = fmt.Sprintf("Dividend Paid: %s (%s)", dividend.StockName, dividend.StockSymbol)
+		body, err = s.generateDividendPaymentEmail(user.Name, dividend)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to generate email body: %w", err)
+	}
+
+	return s.sendEmail(user.Email, subject, body)
+}
+
+func (s *EmailService) generateDividendAnnouncementEmail(userName string, dividend *models.DividendAnnouncement) (string, error) {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dividend Announced</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #16a34a; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .dividend-box { background-color: #fff; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .amount { font-size: 24px; font-weight: bold; color: #16a34a; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Dividend Announced!</h1>
+        </div>
+        <div class="content">
+            <p>Hello %s,</p>
+            
+            <div class="dividend-box">
+                <h3>%s (%s)</h3>
+                <p><strong>Dividend Type:</strong> %s</p>
+                <p><strong>Amount:</strong> <span class="amount">%s %.2f</span></p>
+                <p><strong>Ex-Dividend Date:</strong> %s</p>
+                <p><strong>Payment Date:</strong> %s</p>
+            </div>
+            
+            <p>Great news! %s has announced a dividend payment. Make sure you own shares before the ex-dividend date to be eligible.</p>
+            
+            <p>Best regards,<br>The Shares Alert Ghana Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated dividend alert from Shares Alert Ghana.</p>
+        </div>
+    </div>
+</body>
+</html>
+`, userName, dividend.StockName, dividend.StockSymbol, dividend.DividendType, dividend.Currency, dividend.Amount, dividend.ExDate.Format("January 2, 2006"), dividend.PaymentDate.Format("January 2, 2006"), dividend.StockName), nil
+}
+
+func (s *EmailService) generateDividendPaymentEmail(userName string, dividend *models.DividendAnnouncement) (string, error) {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dividend Payment</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #059669; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .dividend-box { background-color: #fff; border-left: 4px solid #059669; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .amount { font-size: 24px; font-weight: bold; color: #059669; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Dividend Paid!</h1>
+        </div>
+        <div class="content">
+            <p>Hello %s,</p>
+            
+            <div class="dividend-box">
+                <h3>%s (%s)</h3>
+                <p><strong>Dividend Type:</strong> %s</p>
+                <p><strong>Amount:</strong> <span class="amount">%s %.2f</span></p>
+                <p><strong>Payment Date:</strong> %s</p>
+            </div>
+            
+            <p>The dividend for %s has been paid! If you were eligible, the payment should appear in your account soon.</p>
+            
+            <p>Best regards,<br>The Shares Alert Ghana Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated dividend payment notification from Shares Alert Ghana.</p>
+        </div>
+    </div>
+</body>
+</html>
+`, userName, dividend.StockName, dividend.StockSymbol, dividend.DividendType, dividend.Currency, dividend.Amount, dividend.PaymentDate.Format("January 2, 2006"), dividend.StockName), nil
+}

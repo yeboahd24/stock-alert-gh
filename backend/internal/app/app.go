@@ -21,12 +21,13 @@ import (
 )
 
 type App struct {
-	config       *config.Config
-	db           *database.DB
-	router       *chi.Mux
-	alertService *services.AlertService
-	ipoService   *services.IPOService
-	hub          *websocket.Hub
+	config          *config.Config
+	db              *database.DB
+	router          *chi.Mux
+	alertService    *services.AlertService
+	ipoService      *services.IPOService
+	dividendService *services.DividendService
+	hub             *websocket.Hub
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -53,6 +54,7 @@ func New(cfg *config.Config) (*App, error) {
 	userRepo := repository.NewUserRepository(db.DB)
 	alertRepo := repository.NewAlertRepository(db.DB)
 	ipoRepo := repository.NewIPORepository(db.DB, cfg.Database.Type)
+	dividendRepo := repository.NewDividendRepository(db.DB, cfg.Database.Type)
 
 	// Initialize services
 	authService := services.NewAuthService(userRepo, &cfg.Auth)
@@ -61,6 +63,7 @@ func New(cfg *config.Config) (*App, error) {
 	stockService := services.NewStockService(&cfg.External, redisCache, stockCacheTTL)
 	alertService := services.NewAlertService(alertRepo, userRepo, stockService, emailService)
 	ipoService := services.NewIPOService(ipoRepo, alertRepo, userRepo, emailService)
+	dividendService := services.NewDividendService(dividendRepo, alertRepo, userRepo, emailService)
 	cacheService := services.NewCacheService(redisCache)
 
 	// Initialize handlers
@@ -68,6 +71,7 @@ func New(cfg *config.Config) (*App, error) {
 	stockHandler := handlers.NewStockHandler(stockService)
 	alertHandler := handlers.NewAlertHandler(alertService)
 	ipoHandler := handlers.NewIPOHandler(ipoService)
+	dividendHandler := handlers.NewDividendHandler(dividendService)
 	userHandler := handlers.NewUserHandler(userRepo)
 	cacheHandler := handlers.NewCacheHandler(cacheService, stockService)
 
@@ -76,21 +80,24 @@ func New(cfg *config.Config) (*App, error) {
 	go hub.Run()
 
 	// Setup router
-	router := setupRouter(cfg, authHandler, stockHandler, alertHandler, ipoHandler, userHandler, cacheHandler, hub)
+	router := setupRouter(cfg, authHandler, stockHandler, alertHandler, ipoHandler, dividendHandler, userHandler, cacheHandler, hub)
 
 	app := &App{
 		config:       cfg,
 		db:           db,
 		router:       router,
 		alertService: alertService,
-		ipoService:   ipoService,
-		hub:          hub,
+		ipoService:      ipoService,
+		dividendService: dividendService,
+		hub:             hub,
 	}
 
 	// Start alert monitoring in background
 	go app.alertService.StartMonitoring()
 	// Start IPO monitoring in background
 	go app.ipoService.StartIPOMonitoring()
+	// Start dividend monitoring in background
+	go app.dividendService.StartDividendMonitoring()
 
 	// Start stock price broadcasting
 	go app.startStockBroadcast(stockService)
@@ -110,6 +117,7 @@ func setupRouter(
 	stockHandler *handlers.StockHandler,
 	alertHandler *handlers.AlertHandler,
 	ipoHandler *handlers.IPOHandler,
+	dividendHandler *handlers.DividendHandler,
 	userHandler *handlers.UserHandler,
 	cacheHandler *handlers.CacheHandler,
 	hub *websocket.Hub,
@@ -165,6 +173,13 @@ func setupRouter(
 			r.Get("/", ipoHandler.GetAllIPOs)
 			r.Get("/upcoming", ipoHandler.GetUpcomingIPOs)
 			r.With(authHandler.AuthMiddleware).Post("/", ipoHandler.CreateIPO)
+		})
+
+		// Dividend routes (public)
+		r.Route("/dividends", func(r chi.Router) {
+			r.Get("/", dividendHandler.GetAllDividends)
+			r.Get("/upcoming", dividendHandler.GetUpcomingDividends)
+			r.With(authHandler.AuthMiddleware).Post("/", dividendHandler.CreateDividend)
 		})
 
 		// Protected routes

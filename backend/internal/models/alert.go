@@ -70,3 +70,34 @@ const (
 	IPOStatusListed    = "listed"
 	IPOStatusCancelled = "cancelled"
 )
+
+// Dividend statuses
+const (
+	DividendStatusAnnounced = "announced"
+	DividendStatusPaid      = "paid"
+	DividendStatusCancelled = "cancelled"
+)
+
+type DividendAnnouncement struct {
+	ID           string    `json:"id" db:"id"`
+	StockSymbol  string    `json:"stockSymbol" db:"stock_symbol"`
+	StockName    string    `json:"stockName" db:"stock_name"`
+	DividendType string    `json:"dividendType" db:"dividend_type"`
+	Amount       float64   `json:"amount" db:"amount"`
+	Currency     string    `json:"currency" db:"currency"`
+	ExDate       time.Time `json:"exDate" db:"ex_date"`
+	PaymentDate  time.Time `json:"paymentDate" db:"payment_date"`
+	Status       string    `json:"status" db:"status"`
+	CreatedAt    time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt    time.Time `json:"updatedAt" db:"updated_at"`
+}
+
+type CreateDividendRequest struct {
+	StockSymbol  string    `json:"stockSymbol"`
+	StockName    string    `json:"stockName"`
+	DividendType string    `json:"dividendType"`
+	Amount       float64   `json:"amount"`
+	Currency     string    `json:"currency"`
+	ExDate       time.Time `json:"exDate"`
+	PaymentDate  time.Time `json:"paymentDate"`
+}

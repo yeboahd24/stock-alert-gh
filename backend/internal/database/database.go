@@ -87,6 +87,7 @@ func (db *DB) Migrate() error {
 			createUserPreferencesTablePostgres,
 			createAlertsTablePostgres,
 			createIPOTablePostgres,
+			createDividendTablePostgres,
 			createIndexesPostgres,
 		}
 	default: // sqlite
@@ -95,6 +96,7 @@ func (db *DB) Migrate() error {
 			createUserPreferencesTable,
 			createAlertsTable,
 			createIPOTable,
+			createDividendTable,
 			createIndexes,
 		}
 	}
@@ -159,6 +161,9 @@ CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 CREATE INDEX IF NOT EXISTS idx_ipo_status ON ipo_announcements(status);
 CREATE INDEX IF NOT EXISTS idx_ipo_listing_date ON ipo_announcements(listing_date);
 CREATE INDEX IF NOT EXISTS idx_ipo_symbol ON ipo_announcements(symbol);
+CREATE INDEX IF NOT EXISTS idx_dividend_status ON dividend_announcements(status);
+CREATE INDEX IF NOT EXISTS idx_dividend_ex_date ON dividend_announcements(ex_date);
+CREATE INDEX IF NOT EXISTS idx_dividend_symbol ON dividend_announcements(stock_symbol);
 `
 
 // PostgreSQL-specific table definitions
@@ -226,6 +231,36 @@ CREATE TABLE IF NOT EXISTS shares_alert_ipo_announcements (
 	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );`
 
+const createDividendTable = `
+CREATE TABLE IF NOT EXISTS dividend_announcements (
+	id TEXT PRIMARY KEY,
+	stock_symbol TEXT NOT NULL,
+	stock_name TEXT NOT NULL,
+	dividend_type TEXT NOT NULL,
+	amount REAL NOT NULL,
+	currency TEXT DEFAULT 'GHS',
+	ex_date DATETIME NOT NULL,
+	payment_date DATETIME NOT NULL,
+	status TEXT NOT NULL DEFAULT 'announced',
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);`
+
+const createDividendTablePostgres = `
+CREATE TABLE IF NOT EXISTS shares_alert_dividend_announcements (
+	id TEXT PRIMARY KEY,
+	stock_symbol TEXT NOT NULL,
+	stock_name TEXT NOT NULL,
+	dividend_type TEXT NOT NULL,
+	amount REAL NOT NULL,
+	currency TEXT DEFAULT 'GHS',
+	ex_date TIMESTAMP NOT NULL,
+	payment_date TIMESTAMP NOT NULL,
+	status TEXT NOT NULL DEFAULT 'announced',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`
+
 const createIndexesPostgres = `
 CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_user_id ON shares_alert_alerts(user_id);
 CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_status ON shares_alert_alerts(status);
@@ -236,4 +271,7 @@ CREATE INDEX IF NOT EXISTS idx_shares_alert_users_google_id ON shares_alert_user
 CREATE INDEX IF NOT EXISTS idx_shares_alert_ipo_status ON shares_alert_ipo_announcements(status);
 CREATE INDEX IF NOT EXISTS idx_shares_alert_ipo_listing_date ON shares_alert_ipo_announcements(listing_date);
 CREATE INDEX IF NOT EXISTS idx_shares_alert_ipo_symbol ON shares_alert_ipo_announcements(symbol);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_dividend_status ON shares_alert_dividend_announcements(status);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_dividend_ex_date ON shares_alert_dividend_announcements(ex_date);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_dividend_symbol ON shares_alert_dividend_announcements(stock_symbol);
 `

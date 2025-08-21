@@ -75,7 +75,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	chromePaths := []string{
 		"/usr/bin/chromium",
 		"/usr/bin/chromium-browser",
-		"/usr/lib/chromium/",
+		"/usr/lib/chromium",
 		"/usr/bin/google-chrome",
 		"/usr/bin/google-chrome-stable",
 	}

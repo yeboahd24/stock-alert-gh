@@ -18,16 +18,27 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o server cmd/server
 # Final stage
 FROM alpine:latest
 
-# Install runtime dependencies including Chrome
-RUN apk --no-cache add ca-certificates sqlite chromium nss freetype freetype-dev harfbuzz ttf-freefont
+# Install Chromium + runtime dependencies
+RUN apk --no-cache add \
+    ca-certificates \
+    sqlite \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ttf-freefont \
+    bash \
+    curl \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
 
-# Set Chrome environment variables
-ENV CHROME_BIN=/usr/bin/chromium
-ENV CHROME_PATH=/usr/bin/chromium
+# Set environment variables for Chrome
+ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV CHROME_PATH=/usr/lib/chromium/
 
 WORKDIR /root/
 
-# Copy the binary from builder stage
+# Copy the Go binary
 COPY --from=builder /app/server .
 
 # Create data directory for SQLite
@@ -36,5 +47,6 @@ RUN mkdir -p data
 # Expose port
 EXPOSE 10000
 
-# Run the application
+# Run the app with dumb-init to avoid zombie processes
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["./server"]

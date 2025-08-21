@@ -70,7 +70,21 @@ func (s *DividendScraperService) ScrapeDividends() error {
 }
 
 func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error) {
-	ctx, cancel := chromedp.NewContext(context.Background())
+	// Configure Chrome options for headless server environment
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("headless", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-web-security", true),
+		chromedp.ExecPath("/usr/bin/chromium-browser"),
+	)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	ctx, cancel = context.WithTimeout(ctx, 2*time.Minute)

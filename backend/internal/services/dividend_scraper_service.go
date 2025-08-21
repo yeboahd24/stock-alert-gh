@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 
 	"shares-alert-backend/internal/models"
 	"shares-alert-backend/internal/repository"
@@ -85,8 +86,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 		Set("no-first-run").
 		Set("no-zygote").
 		Set("single-process").
-		Set("disable-web-security").
-		Set("disable-features=VizDisplayCompositor")
+		Set("disable-web-security")
 
 	// Use system Chromium if available (Docker environment)
 	if chromiumPath := os.Getenv("ROD_LAUNCHER_BIN"); chromiumPath != "" {
@@ -107,18 +107,12 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	defer browser.MustClose()
 
 	// Navigate to page with better error handling
-	page, err := browser.Page()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create page: %w", err)
-	}
+	page := browser.MustPage()
 	
 	// Set user agent to avoid bot detection
-	err = page.SetUserAgent(&rod.UserAgentReq{
+	page = page.MustSetUserAgent(&proto.NetworkSetUserAgentOverride{
 		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 	})
-	if err != nil {
-		log.Printf("Warning: failed to set user agent: %v", err)
-	}
 	defer page.MustClose()
 
 	err = page.Navigate("https://simplywall.st/stocks/gh/dividend-yield-high")

@@ -78,7 +78,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 		chromedp.Flag("disable-extensions", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-web-security", true),
-		chromedp.ExecPath("/usr/bin/chromium-browser"),
+		chromedp.ExecPath("/usr/bin/chromium"),
 	)
 
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)

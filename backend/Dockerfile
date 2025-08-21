@@ -22,8 +22,8 @@ FROM alpine:latest
 RUN apk --no-cache add ca-certificates sqlite chromium nss freetype freetype-dev harfbuzz ttf-freefont
 
 # Set Chrome environment variables
-ENV CHROME_BIN=/usr/bin/chromium-browser
-ENV CHROME_PATH=/usr/bin/chromium-browser
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROME_PATH=/usr/bin/chromium
 
 WORKDIR /root/
 

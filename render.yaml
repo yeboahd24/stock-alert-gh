@@ -4,7 +4,9 @@ services:
     name: stock-alert-gh-backend
     env: go
     rootDir: backend
-    buildCommand: go build -o main cmd/server/main.go
+    buildCommand: |
+      apt-get update && apt-get install -y chromium-browser
+      go build -o main cmd/server/main.go
     startCommand: ./main
     envVars:
       - key: PORT
@@ -26,9 +28,11 @@ services:
       - key: DB_USER
         value: avnadmin
       # DB_PASSWORD should be added via Render Dashboard Environment Variables
-      # for security - do not commit passwords to git
       - key: DB_SSL_MODE
         value: require
+      # let chromedp know where Chrome lives
+      - key: CHROME_BIN
+        value: /usr/bin/chromium-browser
     healthCheckPath: /api/v1/health
     
   # Frontend Service  
@@ -44,3 +48,4 @@ services:
         value: https://stock-alert-gh-backend.onrender.com/api/v1
         
 databases: []
+

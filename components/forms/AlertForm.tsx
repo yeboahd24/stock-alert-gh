@@ -13,6 +13,7 @@ import {
   Stack,
   IconButton,
   Autocomplete,
+  Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { AlertType } from '../../types/enums';

@@ -107,9 +107,17 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	defer browser.MustClose()
 
 	// Navigate to page with better error handling
-	page, err := browser.Page(rod.DefaultDevice.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"))
+	page, err := browser.Page()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create page: %w", err)
+	}
+	
+	// Set user agent to avoid bot detection
+	err = page.SetUserAgent(&rod.UserAgentReq{
+		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	})
+	if err != nil {
+		log.Printf("Warning: failed to set user agent: %v", err)
 	}
 	defer page.MustClose()
 

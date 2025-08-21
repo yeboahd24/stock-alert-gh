@@ -27,7 +27,7 @@ func NewDividendRepository(db *sql.DB, dbType string) *DividendRepository {
 func (r *DividendRepository) Create(dividend *models.DividendAnnouncement) error {
 	query := fmt.Sprintf(`
 		INSERT INTO %s (id, stock_symbol, stock_name, dividend_type, amount, currency, ex_date, payment_date, status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`, r.tableName)
 	_, err := r.db.Exec(query, dividend.ID, dividend.StockSymbol, dividend.StockName, dividend.DividendType, dividend.Amount, dividend.Currency, dividend.ExDate, dividend.PaymentDate, dividend.Status, dividend.CreatedAt, dividend.UpdatedAt)
 	return err
@@ -61,7 +61,7 @@ func (r *DividendRepository) GetUpcoming() ([]*models.DividendAnnouncement, erro
 	query := fmt.Sprintf(`
 		SELECT id, stock_symbol, stock_name, dividend_type, amount, currency, ex_date, payment_date, status, created_at, updated_at
 		FROM %s
-		WHERE status = ? AND ex_date > ?
+		WHERE status = $1 AND ex_date > $2
 		ORDER BY ex_date ASC
 	`, r.tableName)
 	rows, err := r.db.Query(query, models.DividendStatusAnnounced, time.Now())
@@ -83,7 +83,7 @@ func (r *DividendRepository) GetUpcoming() ([]*models.DividendAnnouncement, erro
 }
 
 func (r *DividendRepository) UpdateStatus(id, status string) error {
-	query := fmt.Sprintf(`UPDATE %s SET status = ?, updated_at = ? WHERE id = ?`, r.tableName)
+	query := fmt.Sprintf(`UPDATE %s SET status = $1, updated_at = $2 WHERE id = $3`, r.tableName)
 	_, err := r.db.Exec(query, status, time.Now(), id)
 	return err
 }
@@ -92,7 +92,7 @@ func (r *DividendRepository) GetBySymbol(symbol string) ([]*models.DividendAnnou
 	query := fmt.Sprintf(`
 		SELECT id, stock_symbol, stock_name, dividend_type, amount, currency, ex_date, payment_date, status, created_at, updated_at
 		FROM %s
-		WHERE stock_symbol = ?
+		WHERE stock_symbol = $1
 		ORDER BY ex_date DESC
 	`, r.tableName)
 	rows, err := r.db.Query(query, symbol)

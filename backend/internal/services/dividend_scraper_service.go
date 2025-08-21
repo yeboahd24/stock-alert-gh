@@ -74,11 +74,12 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	// Find Chrome executable
 	chromePaths := []string{
 		"/usr/bin/chromium",
-		"/usr/bin/chromium-browser", 
+		"/usr/bin/chromium-browser",
+		"/usr/lib/chromium/",
 		"/usr/bin/google-chrome",
 		"/usr/bin/google-chrome-stable",
 	}
-	
+
 	var chromePath string
 	for _, path := range chromePaths {
 		if _, err := os.Stat(path); err == nil {
@@ -86,11 +87,11 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			break
 		}
 	}
-	
+
 	if chromePath == "" {
 		return nil, fmt.Errorf("chrome executable not found")
 	}
-	
+
 	log.Printf("Using Chrome at: %s", chromePath)
 
 	// Configure Chrome options for headless server environment
@@ -134,26 +135,26 @@ func (s *DividendScraperService) parseDividendData(html string) ([]ScrapedDivide
 	rows := rowRegex.FindAllStringSubmatch(html, -1)
 
 	var data []ScrapedDividendData
-	
+
 	for _, row := range rows {
 		if len(row) < 2 {
 			continue
 		}
 
 		rowContent := row[1]
-		
+
 		// Extract ticker and company name
 		tickerRegex := regexp.MustCompile(`([A-Z0-9\.]+)\s+([^<]+)`)
 		tickerMatch := tickerRegex.FindStringSubmatch(rowContent)
-		
+
 		// Extract dividend yield
 		yieldRegex := regexp.MustCompile(`(\d+(?:\.\d+)?%)(?=[^%]*(?:Banks|Energy|Telecom|Insurance))`)
 		yieldMatch := yieldRegex.FindStringSubmatch(rowContent)
-		
+
 		// Extract price
 		priceRegex := regexp.MustCompile(`GH₵([\d\.,]+)`)
 		priceMatch := priceRegex.FindStringSubmatch(rowContent)
-		
+
 		// Extract industry
 		industryRegex := regexp.MustCompile(`(Banks|Energy|Telecom|Insurance|Mining|Manufacturing)`)
 		industryMatch := industryRegex.FindStringSubmatch(rowContent)
@@ -162,7 +163,7 @@ func (s *DividendScraperService) parseDividendData(html string) ([]ScrapedDivide
 			ticker := strings.TrimSpace(tickerMatch[1])
 			name := strings.TrimSpace(tickerMatch[2])
 			divYield := yieldMatch[1]
-			
+
 			var price, industry string
 			if priceMatch != nil {
 				price = "GH₵" + priceMatch[1]
@@ -193,8 +194,6 @@ func (s *DividendScraperService) getMockDividendData() []ScrapedDividendData {
 		{Ticker: "MTN", Name: "MTN Ghana", DivYield: "6.8%", LastPrice: "GH₵0.82", Industry: "Telecom"},
 	}
 }
-
-
 
 func (s *DividendScraperService) processDividendData(data []ScrapedDividendData) error {
 	for _, item := range data {
@@ -253,3 +252,4 @@ func (s *DividendScraperService) processDividendData(data []ScrapedDividendData)
 
 	return nil
 }
+

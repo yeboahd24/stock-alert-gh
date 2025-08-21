@@ -1,52 +1,53 @@
-FROM golang:1.21-alpine AS builder
-
-# Install build dependencies
-RUN apk add --no-cache gcc musl-dev sqlite-dev
+# Stage 1: Build Go binary
+FROM golang:1.22-bullseye as builder
 
 WORKDIR /app
-
-# Copy go mod files
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source code
 COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main ./cmd/server
 
-# Build the application
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o server cmd/server/main.go
+# Stage 2: Runtime
+FROM debian:bullseye-slim
 
-# Final stage
-FROM alpine:latest
-
-# Install Chromium + runtime dependencies
-RUN apk --no-cache add \
-    ca-certificates \
-    sqlite \
+# Install Chromium and dependencies for rod
+RUN apt-get update && \
+    apt-get install -y \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ttf-freefont \
-    bash \
-    curl \
-    dumb-init \
-    && rm -rf /var/cache/apk/*
+    chromium-common \
+    ca-certificates \
+    fonts-liberation \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libxss1 \
+    libxtst6 \
+    libdrm2 \
+    libxkbcommon0 \
+    libasound2 \
+    xdg-utils && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for Chrome
-ENV CHROME_BIN=/usr/bin/chromium-browser
-ENV CHROME_PATH=/usr/lib/chromium/
+# Set environment variables for rod
+ENV ROD_LAUNCHER_BIN=/usr/bin/chromium
+ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMIUM_FLAGS="--no-sandbox --disable-gpu --disable-dev-shm-usage --disable-setuid-sandbox --no-first-run --no-zygote --single-process --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding"
 
-WORKDIR /root/
+WORKDIR /app
+COPY --from=builder /app/main .
 
-# Copy the Go binary
-COPY --from=builder /app/server .
-
-# Create data directory for SQLite
-RUN mkdir -p data
-
-# Expose port
+# Expose Render PORT
+ENV PORT=10000
 EXPOSE 10000
 
-# Run the app with dumb-init to avoid zombie processes
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["./server"]
+CMD ["./main"]

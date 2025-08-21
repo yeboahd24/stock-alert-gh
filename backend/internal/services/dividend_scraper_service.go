@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chromedp/chromedp"
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
 
 	"shares-alert-backend/internal/models"
 	"shares-alert-backend/internal/repository"
@@ -71,118 +71,236 @@ func (s *DividendScraperService) ScrapeDividends() error {
 }
 
 func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error) {
-	// Find Chrome executable
-	chromePaths := []string{
-		"/usr/bin/chromium",
-		"/usr/bin/chromium-browser",
-		"/usr/lib/chromium",
-		"/usr/bin/google-chrome",
-		"/usr/bin/google-chrome-stable",
+	// Launch browser with rod - Docker-optimized configuration
+	l := launcher.New().
+		Headless(true).
+		NoSandbox(true).
+		Set("disable-gpu").
+		Set("disable-dev-shm-usage").
+		Set("disable-extensions").
+		Set("disable-background-timer-throttling").
+		Set("disable-backgrounding-occluded-windows").
+		Set("disable-renderer-backgrounding").
+		Set("disable-setuid-sandbox").
+		Set("no-first-run").
+		Set("no-zygote").
+		Set("single-process").
+		Set("disable-web-security").
+		Set("disable-features=VizDisplayCompositor")
+
+	// Use system Chromium if available (Docker environment)
+	if chromiumPath := os.Getenv("ROD_LAUNCHER_BIN"); chromiumPath != "" {
+		l = l.Bin(chromiumPath)
 	}
 
-	var chromePath string
-	for _, path := range chromePaths {
-		if _, err := os.Stat(path); err == nil {
-			chromePath = path
+	// Try to launch browser with error handling
+	url, err := l.Launch()
+	if err != nil {
+		return nil, fmt.Errorf("failed to launch browser: %w", err)
+	}
+
+	browser := rod.New().ControlURL(url)
+	err = browser.Connect()
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to browser: %w", err)
+	}
+	defer browser.MustClose()
+
+	// Navigate to page with better error handling
+	page, err := browser.Page(rod.DefaultDevice.UserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create page: %w", err)
+	}
+	defer page.MustClose()
+
+	err = page.Navigate("https://simplywall.st/stocks/gh/dividend-yield-high")
+	if err != nil {
+		return nil, fmt.Errorf("failed to navigate to page: %w", err)
+	}
+
+	// Wait for page to load completely
+	err = page.WaitLoad()
+	if err != nil {
+		return nil, fmt.Errorf("failed to wait for page load: %w", err)
+	}
+
+	// Wait additional time for dynamic content
+	time.Sleep(5 * time.Second)
+
+	// Try multiple selectors to find stock cards
+	var cards rod.Elements
+	selectors := []string{
+		"div[data-testid='screener-card']",
+		"[data-testid='screener-card']",
+		"div[data-cy='stock-card']",
+		"article[data-testid*='stock']",
+		".stock-card",
+		"div[class*='card'][class*='stock']",
+		"div[class*='screener']",
+	}
+
+	for _, selector := range selectors {
+		cards, err = page.Elements(selector)
+		if err == nil && len(cards) > 0 {
+			log.Printf("Found %d cards using selector: %s", len(cards), selector)
 			break
 		}
 	}
 
-	if chromePath == "" {
-		return nil, fmt.Errorf("chrome executable not found")
+	if len(cards) == 0 {
+		// Try to get page content for debugging
+		html, _ := page.HTML()
+		log.Printf("No cards found. Page HTML length: %d", len(html))
+		
+		// Look for any elements that might contain stock data
+		allDivs, _ := page.Elements("div")
+		log.Printf("Total div elements found: %d", len(allDivs))
+		
+		return nil, fmt.Errorf("no stock cards found on page")
 	}
-
-	log.Printf("Using Chrome at: %s", chromePath)
-
-	// Configure Chrome options for headless server environment
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.Flag("headless", true),
-		chromedp.Flag("disable-gpu", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
-		chromedp.Flag("disable-extensions", true),
-		chromedp.Flag("no-sandbox", true),
-		chromedp.Flag("disable-web-security", true),
-		chromedp.ExecPath(chromePath),
-	)
-
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
-
-	ctx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
-
-	ctx, cancel = context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-
-	var htmlContent string
-	err := chromedp.Run(ctx,
-		chromedp.Navigate("https://simplywall.st/stocks/gh/dividend-yield-high"),
-		chromedp.WaitVisible(`text=Company Last Price 7D Return 1Y Return`, chromedp.ByQuery),
-		chromedp.Sleep(3*time.Second),
-		chromedp.OuterHTML("html", &htmlContent),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to scrape page: %w", err)
-	}
-
-	return s.parseDividendData(htmlContent)
-}
-
-func (s *DividendScraperService) parseDividendData(html string) ([]ScrapedDividendData, error) {
-	// Extract table rows with dividend data
-	rowRegex := regexp.MustCompile(`<tr[^>]*role="row"[^>]*>(.*?)</tr>`)
-	rows := rowRegex.FindAllStringSubmatch(html, -1)
 
 	var data []ScrapedDividendData
 
-	for _, row := range rows {
-		if len(row) < 2 {
+	for i, card := range cards {
+		if i >= 20 { // Limit to prevent excessive processing
+			break
+		}
+
+		// Try multiple ways to extract company name
+		var companyName string
+		nameSelectors := []string{"h2", "h3", "h1", "[data-testid='company-name']", ".company-name"}
+		for _, nameSelector := range nameSelectors {
+			if nameEl, err := card.Element(nameSelector); err == nil {
+				companyName = nameEl.MustText()
+				break
+			}
+		}
+
+		if companyName == "" {
 			continue
 		}
 
-		rowContent := row[1]
-
-		// Extract ticker and company name
-		tickerRegex := regexp.MustCompile(`([A-Z0-9\.]+)\s+([^<]+)`)
-		tickerMatch := tickerRegex.FindStringSubmatch(rowContent)
-
-		// Extract dividend yield
-		yieldRegex := regexp.MustCompile(`(\d+(?:\.\d+)?%)(?=[^%]*(?:Banks|Energy|Telecom|Insurance))`)
-		yieldMatch := yieldRegex.FindStringSubmatch(rowContent)
-
-		// Extract price
-		priceRegex := regexp.MustCompile(`GH₵([\d\.,]+)`)
-		priceMatch := priceRegex.FindStringSubmatch(rowContent)
-
-		// Extract industry
-		industryRegex := regexp.MustCompile(`(Banks|Energy|Telecom|Insurance|Mining|Manufacturing)`)
-		industryMatch := industryRegex.FindStringSubmatch(rowContent)
-
-		if tickerMatch != nil && yieldMatch != nil && len(tickerMatch) > 2 {
-			ticker := strings.TrimSpace(tickerMatch[1])
-			name := strings.TrimSpace(tickerMatch[2])
-			divYield := yieldMatch[1]
-
-			var price, industry string
-			if priceMatch != nil {
-				price = "GH₵" + priceMatch[1]
+		// Extract ticker from company name or data attributes
+		ticker := s.extractTicker(companyName)
+		if ticker == "" {
+			// Try to extract from data attributes
+			if tickerAttr, err := card.Attribute("data-ticker"); err == nil && *tickerAttr != "" {
+				ticker = *tickerAttr
 			}
-			if industryMatch != nil {
-				industry = industryMatch[1]
-			}
+		}
 
+		if ticker == "" {
+			continue
+		}
+
+		// Extract sector with multiple approaches
+		sector := ""
+		sectorSelectors := []string{
+			"div:contains('Sector')",
+			"span:contains('Sector')", 
+			"[data-testid='sector']",
+			".sector",
+		}
+		for _, sectorSelector := range sectorSelectors {
+			if sectorEl, err := card.ElementR("*", sectorSelector); err == nil {
+				sector = sectorEl.MustText()
+				break
+			}
+		}
+
+		// Extract dividend yield with multiple approaches
+		yield := ""
+		yieldSelectors := []string{
+			"div:contains('Dividend')",
+			"span:contains('Dividend')",
+			"div:contains('%')",
+			"[data-testid='dividend-yield']",
+			".dividend-yield",
+		}
+		for _, yieldSelector := range yieldSelectors {
+			if yieldEl, err := card.ElementR("*", yieldSelector); err == nil {
+				yieldText := yieldEl.MustText()
+				if strings.Contains(yieldText, "%") {
+					yield = yieldText
+					break
+				}
+			}
+		}
+
+		// Extract price with multiple approaches
+		price := ""
+		priceSelectors := []string{
+			"div:contains('Price')",
+			"span:contains('GH₵')",
+			"div:contains('GH₵')",
+			"[data-testid='price']",
+			".price",
+		}
+		for _, priceSelector := range priceSelectors {
+			if priceEl, err := card.ElementR("*", priceSelector); err == nil {
+				priceText := priceEl.MustText()
+				if strings.Contains(priceText, "GH₵") || strings.Contains(priceText, "$") {
+					price = priceText
+					break
+				}
+			}
+		}
+
+		if yield != "" && yield != "0%" {
 			data = append(data, ScrapedDividendData{
 				Ticker:    ticker,
-				Name:      name,
-				DivYield:  divYield,
+				Name:      companyName,
+				DivYield:  yield,
 				LastPrice: price,
-				Industry:  industry,
+				Industry:  sector,
 			})
+			
+			log.Printf("Scraped: %s (%s) - Yield: %s, Price: %s, Sector: %s", 
+				companyName, ticker, yield, price, sector)
 		}
 	}
 
+	log.Printf("Successfully scraped %d dividend stocks", len(data))
 	return data, nil
+}
+
+// extractTicker extracts stock ticker from company name
+func (s *DividendScraperService) extractTicker(companyName string) string {
+	// Common Ghana stock tickers mapping
+	tickerMap := map[string]string{
+		"GCB Bank":           "GCB",
+		"Access Bank":        "ACCESS",
+		"CAL Bank":           "CAL",
+		"Total Petroleum":    "TOTAL",
+		"MTN Ghana":          "MTN",
+		"Ecobank":            "EBG",
+		"Standard Chartered": "SCB",
+		"Societe Generale":   "SG-GH",
+	}
+
+	// Try exact match first
+	for name, ticker := range tickerMap {
+		if strings.Contains(strings.ToLower(companyName), strings.ToLower(name)) {
+			return ticker
+		}
+	}
+
+	// Extract ticker from parentheses if present
+	tickerRegex := regexp.MustCompile(`\(([A-Z0-9\.]+)\)`)
+	if match := tickerRegex.FindStringSubmatch(companyName); len(match) > 1 {
+		return match[1]
+	}
+
+	// Extract first word if it looks like a ticker
+	words := strings.Fields(companyName)
+	if len(words) > 0 {
+		firstWord := strings.ToUpper(words[0])
+		if len(firstWord) <= 6 && regexp.MustCompile(`^[A-Z0-9]+$`).MatchString(firstWord) {
+			return firstWord
+		}
+	}
+
+	return ""
 }
 
 func (s *DividendScraperService) getMockDividendData() []ScrapedDividendData {

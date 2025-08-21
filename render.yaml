@@ -1,13 +1,9 @@
 services:
-  # Backend Service
   - type: web
     name: stock-alert-gh-backend
-    env: go
+    env: docker
     rootDir: backend
-    buildCommand: |
-      apt-get update && apt-get install -y chromium-browser
-      go build -o main cmd/server/main.go
-    startCommand: ./main
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: PORT
         value: 10000
@@ -27,25 +23,24 @@ services:
         value: defaultdb
       - key: DB_USER
         value: avnadmin
-      # DB_PASSWORD should be added via Render Dashboard Environment Variables
       - key: DB_SSL_MODE
         value: require
-      # let chromedp know where Chrome lives
+      # Rod/Chromium configuration for scraping
+      - key: ROD_LAUNCHER_BIN
+        value: /usr/bin/chromium
+      - key: DISPLAY
+        value: :99
       - key: CHROME_BIN
-        value: /usr/bin/chromium-browser
+        value: /usr/bin/chromium
     healthCheckPath: /api/v1/health
-    
-  # Frontend Service  
+
   - type: web
     name: stock-alert-gh
     env: static
-    # If your frontend code is in a subdirectory (e.g., 'frontend'), specify it here.
-    # rootDir: frontend
     buildCommand: VITE_API_URL=https://stock-alert-gh-backend.onrender.com/api/v1 npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
         value: https://stock-alert-gh-backend.onrender.com/api/v1
-        
-databases: []
 
+databases: []

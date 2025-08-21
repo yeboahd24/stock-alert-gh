@@ -316,7 +316,7 @@ const Dashboard: React.FC = () => {
                 <Stack spacing={2}>
                   <Box display="flex" alignItems="center" gap={2}>
                     <Typography variant="h6" color="primary">1.</Typography>
-                    <Typography>Browse stocks below and click "Create Alert" on any stock card</Typography>
+                    <Typography>Browse stocks below and use the "Create Alert" button or floating action button</Typography>
                   </Box>
                   <Box display="flex" alignItems="center" gap={2}>
                     <Typography variant="h6" color="primary">2.</Typography>
@@ -354,7 +354,7 @@ const Dashboard: React.FC = () => {
                     Ghana Stock Exchange - Live Prices
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Real-time stock prices from the Ghana Stock Exchange. Click on any stock to create alerts.
+                    Real-time stock prices from the Ghana Stock Exchange. Click on any stock to view detailed information.
                   </Typography>
                 </Box>
                 <Box sx={{ width: 300 }}>

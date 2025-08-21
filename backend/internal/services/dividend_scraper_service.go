@@ -44,15 +44,15 @@ func NewDividendScraperService(
 func (s *DividendScraperService) StartDividendScraping() {
 	// Check if scraping is enabled via environment variable
 	if os.Getenv("ENABLE_SCRAPING") != "true" {
-		log.Println("Scraping disabled via ENABLE_SCRAPING env var, using mock data only")
+		log.Println("Dividend scraping disabled via ENABLE_SCRAPING env var, using mock data only")
 		return
 	}
 
-	// Use longer interval to reduce memory pressure - scrape every 6 hours instead of daily
+	// Scrape dividend data from external sources every 6 hours
 	ticker := time.NewTicker(6 * time.Hour)
 	defer ticker.Stop()
 
-	log.Println("Starting dividend scraping service (every 6 hours)...")
+	log.Println("Starting background dividend data scraping service (every 6 hours)...")
 
 	// Wait 5 minutes after startup before first scrape to let app stabilize
 	time.Sleep(5 * time.Minute)
@@ -82,26 +82,26 @@ func (s *DividendScraperService) StartDividendScraping() {
 }
 
 func (s *DividendScraperService) ScrapeDividends() error {
-	// Check memory before starting
+	// Check memory before starting web scraping
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	if m.Alloc > 300*1024*1024 { // 300MB limit before starting
-		log.Printf("Memory usage too high (%d MB), using mock data instead", m.Alloc/1024/1024)
+		log.Printf("Memory usage too high (%d MB), using mock dividend data instead", m.Alloc/1024/1024)
 		dividendData := s.getMockDividendData()
 		return s.processDividendData(dividendData)
 	}
 	
-	// Try real scraping first, fallback to mock if Chrome not available
+	// Scrape dividend data from external financial websites, fallback to mock if browser unavailable
 	dividendData, err := s.scrapeRealData()
 	if err != nil {
-		log.Printf("Real scraping failed, using mock data: %v", err)
+		log.Printf("External dividend scraping failed, using mock data: %v", err)
 		dividendData = s.getMockDividendData()
 	}
 	return s.processDividendData(dividendData)
 }
 
 func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error) {
-	// Launch browser with rod - Ultra memory-optimized configuration
+	// Launch headless browser to scrape dividend data from financial websites
 	l := launcher.New().
 		Headless(true).
 		NoSandbox(true).
@@ -159,10 +159,10 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 		runtime.GC()
 	}()
 
-	// Navigate to page with better error handling
+	// Create new page for scraping dividend data
 	page := browser.MustPage()
 	
-	// Set user agent to avoid bot detection
+	// Set user agent to avoid bot detection while scraping
 	page = page.MustSetUserAgent(&proto.NetworkSetUserAgentOverride{
 		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 	})
@@ -176,7 +176,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 
 	err = page.Navigate("https://simplywall.st/stocks/gh/dividend-yield-high")
 	if err != nil {
-		return nil, fmt.Errorf("failed to navigate to page: %w", err)
+		return nil, fmt.Errorf("failed to navigate to dividend data source: %w", err)
 	}
 
 	// Wait for page to load completely
@@ -188,7 +188,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	// Minimal wait time to save memory
 	time.Sleep(2 * time.Second)
 
-	// Try multiple selectors to find stock cards
+	// Try multiple selectors to find dividend stock data cards
 	var cards rod.Elements
 	selectors := []string{
 		"div[data-testid='screener-card']",
@@ -211,19 +211,19 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	if len(cards) == 0 {
 		// Try to get page content for debugging
 		html, _ := page.HTML()
-		log.Printf("No cards found. Page HTML length: %d", len(html))
+		log.Printf("No dividend stock cards found. Page HTML length: %d", len(html))
 		
-		// Look for any elements that might contain stock data
+		// Look for any elements that might contain dividend stock data
 		allDivs, _ := page.Elements("div")
 		log.Printf("Total div elements found: %d", len(allDivs))
 		
-		return nil, fmt.Errorf("no stock cards found on page")
+		return nil, fmt.Errorf("no dividend stock cards found on page")
 	}
 
 	var data []ScrapedDividendData
 
 	for i, card := range cards {
-		if i >= 5 { // Further reduced limit to save memory - only top 5 stocks
+		if i >= 5 { // Limit to top 5 dividend stocks to save memory
 			break
 		}
 		
@@ -237,7 +237,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			}
 		}
 
-		// Try multiple ways to extract company name
+		// Extract company name from dividend stock card
 		var companyName string
 		nameSelectors := []string{"h2", "h3", "h1", "[data-testid='company-name']", ".company-name"}
 		for _, nameSelector := range nameSelectors {
@@ -251,7 +251,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			continue
 		}
 
-		// Extract ticker from company name or data attributes
+		// Extract stock ticker symbol from company name or data attributes
 		ticker := s.extractTicker(companyName)
 		if ticker == "" {
 			// Try to extract from data attributes
@@ -264,7 +264,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			continue
 		}
 
-		// Extract sector with multiple approaches
+		// Extract company sector/industry information
 		sector := ""
 		sectorSelectors := []string{
 			"div:contains('Sector')",
@@ -279,7 +279,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			}
 		}
 
-		// Extract dividend yield with multiple approaches
+		// Extract dividend yield percentage
 		yield := ""
 		yieldSelectors := []string{
 			"div:contains('Dividend')",
@@ -298,7 +298,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			}
 		}
 
-		// Extract price with multiple approaches
+		// Extract current stock price
 		price := ""
 		priceSelectors := []string{
 			"div:contains('Price')",
@@ -317,6 +317,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			}
 		}
 
+		// Only include stocks with valid dividend yields
 		if yield != "" && yield != "0%" {
 			data = append(data, ScrapedDividendData{
 				Ticker:    ticker,
@@ -326,7 +327,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 				Industry:  sector,
 			})
 			
-			log.Printf("Scraped: %s (%s) - Yield: %s, Price: %s, Sector: %s", 
+			log.Printf("Scraped dividend stock: %s (%s) - Yield: %s, Price: %s, Sector: %s", 
 				companyName, ticker, yield, price, sector)
 		}
 	}
@@ -335,9 +336,9 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	return data, nil
 }
 
-// extractTicker extracts stock ticker from company name
+// extractTicker extracts stock ticker symbol from company name for Ghana Stock Exchange
 func (s *DividendScraperService) extractTicker(companyName string) string {
-	// Common Ghana stock tickers mapping
+	// Common Ghana Stock Exchange ticker mappings
 	tickerMap := map[string]string{
 		"GCB Bank":           "GCB",
 		"Access Bank":        "ACCESS",
@@ -374,6 +375,7 @@ func (s *DividendScraperService) extractTicker(companyName string) string {
 	return ""
 }
 
+// getMockDividendData returns sample dividend data when web scraping is unavailable
 func (s *DividendScraperService) getMockDividendData() []ScrapedDividendData {
 	return []ScrapedDividendData{
 		{Ticker: "GCB", Name: "GCB Bank Limited", DivYield: "10.4%", LastPrice: "GH₵4.20", Industry: "Banks"},
@@ -384,21 +386,22 @@ func (s *DividendScraperService) getMockDividendData() []ScrapedDividendData {
 	}
 }
 
+// processDividendData converts scraped dividend data into dividend announcements
 func (s *DividendScraperService) processDividendData(data []ScrapedDividendData) error {
 	for _, item := range data {
-		// Skip if no dividend yield
+		// Skip stocks without dividend yields
 		if item.DivYield == "" || item.DivYield == "0%" {
 			continue
 		}
 
-		// Parse dividend yield to amount (simplified calculation)
+		// Calculate estimated dividend amount from yield percentage and stock price
 		yieldStr := strings.TrimSuffix(item.DivYield, "%")
 		yieldPercent, err := strconv.ParseFloat(yieldStr, 64)
 		if err != nil {
 			continue
 		}
 
-		// Calculate estimated dividend amount from yield and price
+		// Extract numeric price value for dividend calculation
 		priceStr := strings.TrimPrefix(item.LastPrice, "GH₵")
 		priceStr = strings.ReplaceAll(priceStr, ",", "")
 		price, err := strconv.ParseFloat(priceStr, 64)
@@ -408,7 +411,7 @@ func (s *DividendScraperService) processDividendData(data []ScrapedDividendData)
 
 		dividendAmount := (price * yieldPercent) / 100
 
-		// Create dividend announcement
+		// Create dividend announcement for alert system
 		dividend := &models.CreateDividendRequest{
 			StockSymbol:  item.Ticker,
 			StockName:    item.Name,
@@ -419,7 +422,7 @@ func (s *DividendScraperService) processDividendData(data []ScrapedDividendData)
 			PaymentDate:  time.Now().AddDate(0, 0, 45), // Estimated 45 days from now
 		}
 
-		// Check if dividend already exists for this stock recently
+		// Check if dividend announcement already exists for this stock recently
 		existing, _ := s.dividendRepo.GetBySymbol(item.Ticker)
 		hasRecent := false
 		for _, div := range existing {
@@ -429,10 +432,11 @@ func (s *DividendScraperService) processDividendData(data []ScrapedDividendData)
 			}
 		}
 
+		// Create new dividend announcement if none exists recently
 		if !hasRecent {
 			_, err := s.dividendService.CreateDividendAnnouncement(dividend)
 			if err != nil {
-				log.Printf("Failed to create dividend for %s: %v", item.Ticker, err)
+				log.Printf("Failed to create dividend announcement for %s: %v", item.Ticker, err)
 			} else {
 				log.Printf("Created dividend announcement for %s: %.2f GHS", item.Ticker, dividendAmount)
 			}

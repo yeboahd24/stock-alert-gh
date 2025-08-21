@@ -279,6 +279,57 @@ const Dashboard: React.FC = () => {
         {/* Tab Panels */}
         <TabPanel value={currentTab} index={0}>
           <Stack spacing={3}>
+            {/* Welcome Section */}
+            <Paper sx={{ p: 3, bgcolor: 'primary.main', color: 'white' }}>
+              <Typography variant="h5" gutterBottom>
+                📈 Welcome to Ghana's Premier Stock Alert Platform
+              </Typography>
+              <Typography variant="body1" sx={{ mb: 2 }}>
+                Stay ahead of the market with real-time alerts for Ghana Stock Exchange (GSE) stocks. 
+                Never miss price movements, IPO launches, or dividend announcements again.
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <Button 
+                  variant="contained" 
+                  color="secondary"
+                  onClick={() => setAlertFormOpen(true)}
+                  startIcon={<NotificationAddIcon />}
+                >
+                  Create Your First Alert
+                </Button>
+                <Button 
+                  variant="outlined" 
+                  sx={{ color: 'white', borderColor: 'white' }}
+                  onClick={() => setCurrentTab(1)}
+                >
+                  View My Alerts
+                </Button>
+              </Stack>
+            </Paper>
+
+            {/* How It Works Section */}
+            {alerts.length === 0 && (
+              <Paper sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  🚀 How to Get Started
+                </Typography>
+                <Stack spacing={2}>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Typography variant="h6" color="primary">1.</Typography>
+                    <Typography>Browse stocks below and click "Create Alert" on any stock card</Typography>
+                  </Box>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Typography variant="h6" color="primary">2.</Typography>
+                    <Typography>Choose alert type: Price alerts, IPO notifications, or dividend announcements</Typography>
+                  </Box>
+                  <Box display="flex" alignItems="center" gap={2}>
+                    <Typography variant="h6" color="primary">3.</Typography>
+                    <Typography>Receive instant email notifications when your conditions are met</Typography>
+                  </Box>
+                </Stack>
+              </Paper>
+            )}
+
             {/* Market Summary */}
             {stocks.length > 0 && (
               <MarketSummary stocks={stocks} />
@@ -298,9 +349,14 @@ const Dashboard: React.FC = () => {
             {/* Stock Cards Grid */}
             <Stack spacing={2}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6" component="h2">
-                  Your Watchlist
-                </Typography>
+                <Box>
+                  <Typography variant="h6" component="h2">
+                    Ghana Stock Exchange - Live Prices
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    Real-time stock prices from the Ghana Stock Exchange. Click on any stock to create alerts.
+                  </Typography>
+                </Box>
                 <Box sx={{ width: 300 }}>
                   <SearchBar
                     value={stockSearch}
@@ -327,8 +383,17 @@ const Dashboard: React.FC = () => {
                       />
                     </Box>
                   ))
-                ) : (
+                ) : stockSearch ? (
                   <Typography color="text.secondary">No stocks found matching "{stockSearch}"</Typography>
+                ) : (
+                  <Paper sx={{ p: 3, textAlign: 'center' }}>
+                    <Typography variant="h6" color="textSecondary" gutterBottom>
+                      📊 Loading Ghana Stock Exchange Data...
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      We're fetching the latest stock prices from GSE. This may take a moment.
+                    </Typography>
+                  </Paper>
                 )}
               </Stack>
             </Stack>
@@ -346,9 +411,14 @@ const Dashboard: React.FC = () => {
             {/* Chart */}
             <Stack spacing={2}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="h6" component="h2">
-                  Price Chart
-                </Typography>
+                <Box>
+                  <Typography variant="h6" component="h2">
+                    Stock Price Trends
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    7-day price movement for selected stock. Use this to identify trends and set better alert prices.
+                  </Typography>
+                </Box>
                 {stocks.length > 0 && (
                   <FormControl size="small" sx={{ minWidth: 200 }}>
                     <InputLabel>Select Stock</InputLabel>
@@ -381,9 +451,20 @@ const Dashboard: React.FC = () => {
 
         <TabPanel value={currentTab} index={1}>
           <Stack spacing={3}>
+            {/* Alerts Header */}
+            <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+              <Typography variant="h6" gutterBottom>
+                🔔 Your Stock Alerts ({filteredAlerts.length})
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Manage your personalized alerts for Ghana Stock Exchange stocks. 
+                Get notified via email when your conditions are met.
+              </Typography>
+            </Paper>
+            
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h6" component="h2">
-                My Alerts ({filteredAlerts.length})
+              <Typography variant="subtitle1" component="h3">
+                Active Alerts
               </Typography>
               <Button
                 variant="contained"
@@ -397,29 +478,63 @@ const Dashboard: React.FC = () => {
               filters={alertFilters}
               onFilterChange={setAlertFilter}
             />
-            <AlertsTable
-              alerts={filteredAlerts.map(alert => ({
-                ...alert,
-                status: alert.status as AlertStatus,
-                alertType: alert.alertType as AlertType,
-              }))}
-              onEdit={handleEditAlert}
-              onDelete={handleDeleteAlert}
-            />
+            
+            {filteredAlerts.length === 0 ? (
+              <Paper sx={{ p: 4, textAlign: 'center' }}>
+                <Typography variant="h6" color="textSecondary" gutterBottom>
+                  🚨 No Alerts Yet
+                </Typography>
+                <Typography variant="body1" color="textSecondary" sx={{ mb: 2 }}>
+                  Create your first alert to start monitoring Ghana Stock Exchange stocks.
+                </Typography>
+                <Button 
+                  variant="contained" 
+                  onClick={() => setAlertFormOpen(true)}
+                  startIcon={<NotificationAddIcon />}
+                >
+                  Create Your First Alert
+                </Button>
+              </Paper>
+            ) : (
+              <AlertsTable
+                alerts={filteredAlerts.map(alert => ({
+                  ...alert,
+                  status: alert.status as AlertStatus,
+                  alertType: alert.alertType as AlertType,
+                }))}
+                onEdit={handleEditAlert}
+                onDelete={handleDeleteAlert}
+              />
+            )}
           </Stack>
         </TabPanel>
 
         <TabPanel value={currentTab} index={2}>
           <Stack spacing={3}>
-            <Typography variant="h6" component="h2">
-              Notification Settings
-            </Typography>
+            <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+              <Typography variant="h6" gutterBottom>
+                ⚙️ Notification Preferences
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Customize how and when you receive stock alerts. Choose your preferred notification methods and frequency.
+              </Typography>
+            </Paper>
             <NotificationSettings onSave={handleSaveNotificationSettings} />
           </Stack>
         </TabPanel>
 
         <TabPanel value={currentTab} index={3}>
-          <UserProfile />
+          <Stack spacing={3}>
+            <Paper sx={{ p: 2, bgcolor: 'grey.50' }}>
+              <Typography variant="h6" gutterBottom>
+                👤 Your Profile
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Manage your account information and preferences for the Shares Alert Ghana platform.
+              </Typography>
+            </Paper>
+            <UserProfile />
+          </Stack>
         </TabPanel>
       </Stack>
 

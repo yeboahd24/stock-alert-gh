@@ -98,6 +98,9 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
       </DialogTitle>
 
       <DialogContent>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+          Set up alerts to get notified about stock price changes, new IPO listings, or dividend announcements.
+        </Typography>
         <Stack spacing={3} sx={{ mt: 1 }}>
           <Autocomplete
             options={stocks}
@@ -127,6 +130,11 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
                 </MenuItem>
               ))}
             </Select>
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
+              • Price Alert: Get notified when stock reaches your target price<br/>
+              • IPO Alert: Get notified about new company listings<br/>
+              • Dividend Alert: Get notified about dividend announcements
+            </Typography>
           </FormControl>
 
           {formData.alertType === AlertType.PRICE_THRESHOLD && (
@@ -136,10 +144,22 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
               value={formData.thresholdPrice || ''}
               onChange={(e) => setFormData(prev => ({ ...prev, thresholdPrice: parseFloat(e.target.value) }))}
               error={!!errors.thresholdPrice}
-              helperText={errors.thresholdPrice}
+              helperText={errors.thresholdPrice || "You'll be notified when the stock price reaches or exceeds this amount"}
               required
               inputProps={{ min: 0, step: 0.01 }}
             />
+          )}
+          
+          {formData.alertType === AlertType.IPO_ALERT && (
+            <Typography variant="body2" color="textSecondary" sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              📈 You'll receive notifications when new companies are announced for listing on the Ghana Stock Exchange.
+            </Typography>
+          )}
+          
+          {formData.alertType === AlertType.DIVIDEND_ANNOUNCEMENT && (
+            <Typography variant="body2" color="textSecondary" sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+              💰 You'll receive notifications when companies announce dividend payments for this stock.
+            </Typography>
           )}
         </Stack>
       </DialogContent>
@@ -151,6 +171,9 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
         <Button onClick={handleSubmit} variant="contained">
           Create Alert
         </Button>
+        <Typography variant="caption" color="textSecondary" align="center" sx={{ mt: 1 }}>
+          You'll receive email notifications when your alert conditions are met.
+        </Typography>
       </DialogActions>
     </Dialog>
   );

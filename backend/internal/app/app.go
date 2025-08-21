@@ -98,6 +98,9 @@ func New(cfg *config.Config) (*App, error) {
 	go app.ipoService.StartIPOMonitoring()
 	// Start dividend monitoring in background
 	go app.dividendService.StartDividendMonitoring()
+	// Start dividend scraping in background
+	dividendScraper := services.NewDividendScraperService(dividendRepo, dividendService)
+	go dividendScraper.StartDividendScraping()
 
 	// Start stock price broadcasting
 	go app.startStockBroadcast(stockService)

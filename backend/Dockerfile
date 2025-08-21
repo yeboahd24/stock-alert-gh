@@ -18,8 +18,12 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o server cmd/server
 # Final stage
 FROM alpine:latest
 
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates sqlite
+# Install runtime dependencies including Chrome
+RUN apk --no-cache add ca-certificates sqlite chromium nss freetype freetype-dev harfbuzz ttf-freefont
+
+# Set Chrome environment variables
+ENV CHROME_BIN=/usr/bin/chromium-browser
+ENV CHROME_PATH=/usr/bin/chromium-browser
 
 WORKDIR /root/
 

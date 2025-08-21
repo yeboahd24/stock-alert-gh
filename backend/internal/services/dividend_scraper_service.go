@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -70,6 +71,28 @@ func (s *DividendScraperService) ScrapeDividends() error {
 }
 
 func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error) {
+	// Find Chrome executable
+	chromePaths := []string{
+		"/usr/bin/chromium",
+		"/usr/bin/chromium-browser", 
+		"/usr/bin/google-chrome",
+		"/usr/bin/google-chrome-stable",
+	}
+	
+	var chromePath string
+	for _, path := range chromePaths {
+		if _, err := os.Stat(path); err == nil {
+			chromePath = path
+			break
+		}
+	}
+	
+	if chromePath == "" {
+		return nil, fmt.Errorf("chrome executable not found")
+	}
+	
+	log.Printf("Using Chrome at: %s", chromePath)
+
 	// Configure Chrome options for headless server environment
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.Flag("headless", true),
@@ -78,7 +101,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 		chromedp.Flag("disable-extensions", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-web-security", true),
-		chromedp.ExecPath("/usr/bin/chromium"),
+		chromedp.ExecPath(chromePath),
 	)
 
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)

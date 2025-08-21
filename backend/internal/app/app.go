@@ -25,6 +25,7 @@ type App struct {
 	db           *database.DB
 	router       *chi.Mux
 	alertService *services.AlertService
+	ipoService   *services.IPOService
 	hub          *websocket.Hub
 }
 
@@ -51,6 +52,7 @@ func New(cfg *config.Config) (*App, error) {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(db.DB)
 	alertRepo := repository.NewAlertRepository(db.DB)
+	ipoRepo := repository.NewIPORepository(db.DB, cfg.Database.Type)
 
 	// Initialize services
 	authService := services.NewAuthService(userRepo, &cfg.Auth)
@@ -58,12 +60,14 @@ func New(cfg *config.Config) (*App, error) {
 	stockCacheTTL := time.Duration(cfg.Cache.StockCacheTTL) * time.Minute
 	stockService := services.NewStockService(&cfg.External, redisCache, stockCacheTTL)
 	alertService := services.NewAlertService(alertRepo, userRepo, stockService, emailService)
+	ipoService := services.NewIPOService(ipoRepo, alertRepo, userRepo, emailService)
 	cacheService := services.NewCacheService(redisCache)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(authService)
 	stockHandler := handlers.NewStockHandler(stockService)
 	alertHandler := handlers.NewAlertHandler(alertService)
+	ipoHandler := handlers.NewIPOHandler(ipoService)
 	userHandler := handlers.NewUserHandler(userRepo)
 	cacheHandler := handlers.NewCacheHandler(cacheService, stockService)
 
@@ -72,18 +76,21 @@ func New(cfg *config.Config) (*App, error) {
 	go hub.Run()
 
 	// Setup router
-	router := setupRouter(cfg, authHandler, stockHandler, alertHandler, userHandler, cacheHandler, hub)
+	router := setupRouter(cfg, authHandler, stockHandler, alertHandler, ipoHandler, userHandler, cacheHandler, hub)
 
 	app := &App{
 		config:       cfg,
 		db:           db,
 		router:       router,
 		alertService: alertService,
+		ipoService:   ipoService,
 		hub:          hub,
 	}
 
 	// Start alert monitoring in background
 	go app.alertService.StartMonitoring()
+	// Start IPO monitoring in background
+	go app.ipoService.StartIPOMonitoring()
 
 	// Start stock price broadcasting
 	go app.startStockBroadcast(stockService)
@@ -102,6 +109,7 @@ func setupRouter(
 	authHandler *handlers.AuthHandler,
 	stockHandler *handlers.StockHandler,
 	alertHandler *handlers.AlertHandler,
+	ipoHandler *handlers.IPOHandler,
 	userHandler *handlers.UserHandler,
 	cacheHandler *handlers.CacheHandler,
 	hub *websocket.Hub,
@@ -150,6 +158,13 @@ func setupRouter(
 			r.Get("/", stockHandler.GetAllStocks)
 			r.Get("/{symbol}", stockHandler.GetStock)
 			r.Get("/{symbol}/details", stockHandler.GetStockDetails)
+		})
+
+		// IPO routes (public)
+		r.Route("/ipos", func(r chi.Router) {
+			r.Get("/", ipoHandler.GetAllIPOs)
+			r.Get("/upcoming", ipoHandler.GetUpcomingIPOs)
+			r.With(authHandler.AuthMiddleware).Post("/", ipoHandler.CreateIPO)
 		})
 
 		// Protected routes

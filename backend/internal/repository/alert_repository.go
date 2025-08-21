@@ -198,3 +198,34 @@ func (r *AlertRepository) TriggerAlert(alertID string) error {
 	_, err := r.db.Exec(query, models.AlertStatusTriggered, now, now, alertID)
 	return err
 }
+
+func (r *AlertRepository) GetActiveAlertsByType(alertType string) ([]*models.Alert, error) {
+	query := `
+		SELECT id, user_id, stock_symbol, stock_name, alert_type, threshold_price,
+			current_price, status, created_at, updated_at, triggered_at
+		FROM shares_alert_alerts
+		WHERE status = $1 AND alert_type = $2
+		ORDER BY created_at DESC
+	`
+	rows, err := r.db.Query(query, models.AlertStatusActive, alertType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var alerts []*models.Alert
+	for rows.Next() {
+		alert := &models.Alert{}
+		err := rows.Scan(
+			&alert.ID, &alert.UserID, &alert.StockSymbol, &alert.StockName,
+			&alert.AlertType, &alert.ThresholdPrice, &alert.CurrentPrice,
+			&alert.Status, &alert.CreatedAt, &alert.UpdatedAt, &alert.TriggeredAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		alerts = append(alerts, alert)
+	}
+
+	return alerts, nil
+}

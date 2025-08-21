@@ -132,6 +132,10 @@ func (s *AlertService) DeleteAlert(alertID, userID string) error {
 	return s.alertRepo.Delete(alert.ID)
 }
 
+func (s *AlertService) GetActiveAlertsByType(alertType string) ([]*models.Alert, error) {
+	return s.alertRepo.GetActiveAlertsByType(alertType)
+}
+
 func (s *AlertService) StartMonitoring() {
 	ticker := time.NewTicker(30 * time.Second) // Check every 30 seconds
 	defer ticker.Stop()
@@ -164,7 +168,8 @@ func (s *AlertService) checkAlerts() error {
 }
 
 func (s *AlertService) processAlert(alert *models.Alert) error {
-	// Only process price threshold alerts for now
+	// Only process price threshold alerts in this function
+	// IPO alerts are handled by IPOService
 	if alert.AlertType != models.AlertTypePriceThreshold {
 		return nil
 	}

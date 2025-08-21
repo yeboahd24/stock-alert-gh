@@ -193,3 +193,121 @@ func (s *EmailService) generateWelcomeEmailBody(userName string) string {
 </html>
 `, userName)
 }
+
+func (s *EmailService) SendIPOAlertEmail(user *models.User, alert *models.Alert, ipo *models.IPOAnnouncement, eventType string) error {
+	if s.config.SMTPUser == "" || s.config.SMTPPassword == "" {
+		return fmt.Errorf("email service not configured")
+	}
+
+	var subject string
+	var body string
+	var err error
+
+	if eventType == "announced" {
+		subject = fmt.Sprintf("New IPO Announced: %s (%s)", ipo.CompanyName, ipo.Symbol)
+		body, err = s.generateIPOAnnouncementEmail(user.Name, ipo)
+	} else {
+		subject = fmt.Sprintf("IPO Now Listed: %s (%s)", ipo.CompanyName, ipo.Symbol)
+		body, err = s.generateIPOListingEmail(user.Name, ipo)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to generate email body: %w", err)
+	}
+
+	return s.sendEmail(user.Email, subject, body)
+}
+
+func (s *EmailService) generateIPOAnnouncementEmail(userName string, ipo *models.IPOAnnouncement) (string, error) {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>New IPO Announced</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #059669; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .ipo-box { background-color: #fff; border-left: 4px solid #059669; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .price { font-size: 20px; font-weight: bold; color: #059669; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 New IPO Announced!</h1>
+        </div>
+        <div class="content">
+            <p>Hello %s,</p>
+            
+            <div class="ipo-box">
+                <h3>%s (%s)</h3>
+                <p><strong>Sector:</strong> %s</p>
+                <p><strong>Offer Price:</strong> <span class="price">GH₵ %.2f</span></p>
+                <p><strong>Expected Listing Date:</strong> %s</p>
+            </div>
+            
+            <p>A new company is going public on the Ghana Stock Exchange! This is your opportunity to invest in %s before it starts trading.</p>
+            
+            <p>Keep an eye on the listing date and be ready to trade when it goes live.</p>
+            
+            <p>Best regards,<br>The Shares Alert Ghana Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated IPO alert from Shares Alert Ghana.</p>
+        </div>
+    </div>
+</body>
+</html>
+`, userName, ipo.CompanyName, ipo.Symbol, ipo.Sector, ipo.OfferPrice, ipo.ListingDate.Format("January 2, 2006"), ipo.CompanyName), nil
+}
+
+func (s *EmailService) generateIPOListingEmail(userName string, ipo *models.IPOAnnouncement) (string, error) {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IPO Now Listed</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .ipo-box { background-color: #fff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .price { font-size: 20px; font-weight: bold; color: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 IPO Now Trading!</h1>
+        </div>
+        <div class="content">
+            <p>Hello %s,</p>
+            
+            <div class="ipo-box">
+                <h3>%s (%s)</h3>
+                <p><strong>Sector:</strong> %s</p>
+                <p><strong>Original Offer Price:</strong> <span class="price">GH₵ %.2f</span></p>
+                <p><strong>Listed On:</strong> %s</p>
+            </div>
+            
+            <p>Great news! %s is now officially listed and trading on the Ghana Stock Exchange.</p>
+            
+            <p>You can now buy and sell shares of %s through your broker or trading platform.</p>
+            
+            <p>Best regards,<br>The Shares Alert Ghana Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated IPO listing notification from Shares Alert Ghana.</p>
+        </div>
+    </div>
+</body>
+</html>
+`, userName, ipo.CompanyName, ipo.Symbol, ipo.Sector, ipo.OfferPrice, ipo.ListingDate.Format("January 2, 2006"), ipo.CompanyName, ipo.CompanyName), nil
+}

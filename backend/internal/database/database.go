@@ -86,6 +86,7 @@ func (db *DB) Migrate() error {
 			createUsersTablePostgres,
 			createUserPreferencesTablePostgres,
 			createAlertsTablePostgres,
+			createIPOTablePostgres,
 			createIndexesPostgres,
 		}
 	default: // sqlite
@@ -93,6 +94,7 @@ func (db *DB) Migrate() error {
 			createUsersTable,
 			createUserPreferencesTable,
 			createAlertsTable,
+			createIPOTable,
 			createIndexes,
 		}
 	}
@@ -154,6 +156,9 @@ CREATE INDEX IF NOT EXISTS idx_alerts_stock_symbol ON alerts(stock_symbol);
 CREATE INDEX IF NOT EXISTS idx_alerts_alert_type ON alerts(alert_type);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
+CREATE INDEX IF NOT EXISTS idx_ipo_status ON ipo_announcements(status);
+CREATE INDEX IF NOT EXISTS idx_ipo_listing_date ON ipo_announcements(listing_date);
+CREATE INDEX IF NOT EXISTS idx_ipo_symbol ON ipo_announcements(symbol);
 `
 
 // PostgreSQL-specific table definitions
@@ -195,6 +200,32 @@ CREATE TABLE IF NOT EXISTS shares_alert_alerts (
 	triggered_at TIMESTAMP
 );`
 
+const createIPOTable = `
+CREATE TABLE IF NOT EXISTS ipo_announcements (
+	id TEXT PRIMARY KEY,
+	company_name TEXT NOT NULL,
+	symbol TEXT NOT NULL UNIQUE,
+	sector TEXT,
+	offer_price REAL NOT NULL,
+	listing_date DATETIME NOT NULL,
+	status TEXT NOT NULL DEFAULT 'announced',
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);`
+
+const createIPOTablePostgres = `
+CREATE TABLE IF NOT EXISTS shares_alert_ipo_announcements (
+	id TEXT PRIMARY KEY,
+	company_name TEXT NOT NULL,
+	symbol TEXT NOT NULL UNIQUE,
+	sector TEXT,
+	offer_price REAL NOT NULL,
+	listing_date TIMESTAMP NOT NULL,
+	status TEXT NOT NULL DEFAULT 'announced',
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`
+
 const createIndexesPostgres = `
 CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_user_id ON shares_alert_alerts(user_id);
 CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_status ON shares_alert_alerts(status);
@@ -202,4 +233,7 @@ CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_stock_symbol ON shares_alert_
 CREATE INDEX IF NOT EXISTS idx_shares_alert_alerts_alert_type ON shares_alert_alerts(alert_type);
 CREATE INDEX IF NOT EXISTS idx_shares_alert_users_email ON shares_alert_users(email);
 CREATE INDEX IF NOT EXISTS idx_shares_alert_users_google_id ON shares_alert_users(google_id);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_ipo_status ON shares_alert_ipo_announcements(status);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_ipo_listing_date ON shares_alert_ipo_announcements(listing_date);
+CREATE INDEX IF NOT EXISTS idx_shares_alert_ipo_symbol ON shares_alert_ipo_announcements(symbol);
 `

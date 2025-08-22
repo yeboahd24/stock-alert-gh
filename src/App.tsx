@@ -1,44 +1,15 @@
 import React, { Suspense } from 'react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { CircularProgress, Box } from '@mui/material';
+import { Box } from '@mui/material';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
+import BrandedLoader from '../components/common/BrandedLoader';
+import theme from '../theme/theme';
+import './styles/brand.css';
 
 // Lazy load the Dashboard component
 const Dashboard = React.lazy(() => import('../components/dashboard/Dashboard'));
-
-// Create a custom theme
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-    background: {
-      default: '#f5f5f5',
-    },
-  },
-  typography: {
-    h4: {
-      fontWeight: 600,
-    },
-    h5: {
-      fontWeight: 600,
-    },
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-        },
-      },
-    },
-  },
-});
 
 // Loading component
 const LoadingFallback = () => (
@@ -47,8 +18,12 @@ const LoadingFallback = () => (
     justifyContent="center" 
     alignItems="center" 
     minHeight="100vh"
+    sx={{ backgroundColor: 'background.default' }}
   >
-    <CircularProgress />
+    <BrandedLoader 
+      message="Initializing Shares Alert Ghana..."
+      size="large"
+    />
   </Box>
 );
 

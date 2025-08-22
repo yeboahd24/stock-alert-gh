@@ -41,6 +41,7 @@ import TechnicalIndicators from '../charts/TechnicalIndicators';
 import MarketSummary from '../market/MarketSummary';
 import TopMovers from '../market/TopMovers';
 import Footer from '../common/Footer';
+import BrandHeader from '../common/BrandHeader';
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(3),
@@ -249,17 +250,16 @@ const Dashboard: React.FC = () => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <StyledContainer maxWidth="lg" sx={{ flex: 1 }}>
         <Stack spacing={3}>
-        {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack>
-            <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
-              <DashboardIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Shares Alert Ghana
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary">
-              Welcome back, {user?.name} {isConnected && '🟢 Live'}
-            </Typography>
-          </Stack>
+        {/* Brand Header */}
+        <Box sx={{ mx: -3, mb: 3 }}>
+          <BrandHeader 
+            showLiveIndicator={isConnected}
+            subtitle={`Welcome back, ${user?.name} • Ghana Stock Exchange Platform`}
+          />
+        </Box>
+        
+        {/* User Menu */}
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
           <UserMenu 
             onOpenSettings={() => setCurrentTab(2)}
             onOpenNotifications={() => setCurrentTab(2)}
@@ -280,31 +280,77 @@ const Dashboard: React.FC = () => {
         <TabPanel value={currentTab} index={0}>
           <Stack spacing={3}>
             {/* Welcome Section */}
-            <Paper sx={{ p: 3, bgcolor: 'primary.main', color: 'white' }}>
-              <Typography variant="h5" gutterBottom>
-                📈 Welcome to Ghana's Premier Stock Alert Platform
-              </Typography>
-              <Typography variant="body1" sx={{ mb: 2 }}>
-                Stay ahead of the market with real-time alerts for Ghana Stock Exchange (GSE) stocks. 
-                Never miss price movements, IPO launches, or dividend announcements again.
-              </Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Button 
-                  variant="contained" 
-                  color="secondary"
-                  onClick={() => setAlertFormOpen(true)}
-                  startIcon={<NotificationAddIcon />}
-                >
-                  Create Your First Alert
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  sx={{ color: 'white', borderColor: 'white' }}
-                  onClick={() => setCurrentTab(1)}
-                >
-                  View My Alerts
-                </Button>
-              </Stack>
+            <Paper 
+              sx={{ 
+                p: 4, 
+                background: 'linear-gradient(135deg, #006B3F 0%, #004d2e 100%)',
+                color: 'white',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: -50,
+                  right: -50,
+                  width: 100,
+                  height: 100,
+                  background: 'rgba(252, 209, 22, 0.1)',
+                  borderRadius: '50%',
+                },
+                '&::after': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: -30,
+                  left: -30,
+                  width: 80,
+                  height: 80,
+                  background: 'rgba(206, 17, 38, 0.1)',
+                  borderRadius: '50%',
+                }
+              }}
+            >
+              <Box sx={{ position: 'relative', zIndex: 1 }}>
+                <Typography variant="h5" gutterBottom sx={{ fontWeight: 700 }}>
+                  📈 Ghana's Premier Stock Alert Platform
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 3, opacity: 0.95, lineHeight: 1.6 }}>
+                  Stay ahead of the market with real-time alerts for Ghana Stock Exchange (GSE) stocks. 
+                  Never miss price movements, IPO launches, or dividend announcements again.
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Button 
+                    variant="contained" 
+                    color="secondary"
+                    onClick={() => setAlertFormOpen(true)}
+                    startIcon={<NotificationAddIcon />}
+                    sx={{ 
+                      fontWeight: 600,
+                      py: 1.5,
+                      px: 3,
+                      boxShadow: '0 4px 15px rgba(252, 209, 22, 0.4)'
+                    }}
+                  >
+                    Create Your First Alert
+                  </Button>
+                  <Button 
+                    variant="outlined" 
+                    sx={{ 
+                      color: 'white', 
+                      borderColor: 'rgba(255,255,255,0.5)',
+                      fontWeight: 600,
+                      py: 1.5,
+                      px: 3,
+                      '&:hover': {
+                        borderColor: 'white',
+                        backgroundColor: 'rgba(255,255,255,0.1)'
+                      }
+                    }}
+                    onClick={() => setCurrentTab(1)}
+                  >
+                    View My Alerts
+                  </Button>
+                </Stack>
+              </Box>
             </Paper>
 
             {/* How It Works Section */}

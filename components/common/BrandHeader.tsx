@@ -36,15 +36,15 @@ const LogoContainer = styled(Stack)(({ theme }) => ({
   zIndex: 1,
 }));
 
-const BrandIcon = styled(Box)(({ theme }) => ({
+const BrandIcon = styled(Box)(() => ({
   width: 48,
   height: 48,
   borderRadius: '12px',
-  background: `linear-gradient(135deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.light})`,
+  background: 'linear-gradient(135deg, #FCD116, #fde047)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  marginRight: theme.spacing(2),
+  marginRight: 16,
   boxShadow: '0 4px 12px rgba(252, 209, 22, 0.3)',
 }));
 

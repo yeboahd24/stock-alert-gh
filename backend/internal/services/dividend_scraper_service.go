@@ -145,6 +145,10 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	}
 
 	browser := rod.New().ControlURL(url)
+	if browser == nil {
+		return nil, fmt.Errorf("failed to create browser instance")
+	}
+
 	err = browser.Connect()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to browser: %w", err)
@@ -153,26 +157,35 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 	// Ensure browser cleanup with explicit close
 	defer func() {
 		if browser != nil {
-			browser.MustClose()
+			browser.Close()
 		}
 		// Force garbage collection after browser cleanup
 		runtime.GC()
 	}()
 
 	// Create new page for scraping dividend data
-	page := browser.MustPage()
-	
-	// Set user agent to avoid bot detection while scraping
-	page = page.MustSetUserAgent(&proto.NetworkSetUserAgentOverride{
-		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-	})
+	page, err := browser.Page(proto.TargetCreateTarget{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create page: %w", err)
+	}
+	if page == nil {
+		return nil, fmt.Errorf("page is nil")
+	}
 	
 	// Ensure page cleanup
 	defer func() {
 		if page != nil {
-			page.MustClose()
+			page.Close()
 		}
 	}()
+
+	// Set user agent to avoid bot detection while scraping
+	err = page.SetUserAgent(&proto.NetworkSetUserAgentOverride{
+		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to set user agent: %w", err)
+	}
 
 	err = page.Navigate("https://simplywall.st/stocks/gh/dividend-yield-high")
 	if err != nil {
@@ -237,13 +250,20 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			}
 		}
 
+		// Ensure card is not nil
+		if card == nil {
+			continue
+		}
+
 		// Extract company name from dividend stock card
 		var companyName string
 		nameSelectors := []string{"h2", "h3", "h1", "[data-testid='company-name']", ".company-name"}
 		for _, nameSelector := range nameSelectors {
-			if nameEl, err := card.Element(nameSelector); err == nil {
-				companyName = nameEl.MustText()
-				break
+			if nameEl, err := card.Element(nameSelector); err == nil && nameEl != nil {
+				if text, err := nameEl.Text(); err == nil {
+					companyName = text
+					break
+				}
 			}
 		}
 
@@ -255,7 +275,7 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 		ticker := s.extractTicker(companyName)
 		if ticker == "" {
 			// Try to extract from data attributes
-			if tickerAttr, err := card.Attribute("data-ticker"); err == nil && *tickerAttr != "" {
+			if tickerAttr, err := card.Attribute("data-ticker"); err == nil && tickerAttr != nil && *tickerAttr != "" {
 				ticker = *tickerAttr
 			}
 		}
@@ -273,9 +293,11 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			".sector",
 		}
 		for _, sectorSelector := range sectorSelectors {
-			if sectorEl, err := card.ElementR("*", sectorSelector); err == nil {
-				sector = sectorEl.MustText()
-				break
+			if sectorEl, err := card.ElementR("*", sectorSelector); err == nil && sectorEl != nil {
+				if text, err := sectorEl.Text(); err == nil {
+					sector = text
+					break
+				}
 			}
 		}
 
@@ -289,9 +311,8 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			".dividend-yield",
 		}
 		for _, yieldSelector := range yieldSelectors {
-			if yieldEl, err := card.ElementR("*", yieldSelector); err == nil {
-				yieldText := yieldEl.MustText()
-				if strings.Contains(yieldText, "%") {
+			if yieldEl, err := card.ElementR("*", yieldSelector); err == nil && yieldEl != nil {
+				if yieldText, err := yieldEl.Text(); err == nil && strings.Contains(yieldText, "%") {
 					yield = yieldText
 					break
 				}
@@ -308,9 +329,8 @@ func (s *DividendScraperService) scrapeRealData() ([]ScrapedDividendData, error)
 			".price",
 		}
 		for _, priceSelector := range priceSelectors {
-			if priceEl, err := card.ElementR("*", priceSelector); err == nil {
-				priceText := priceEl.MustText()
-				if strings.Contains(priceText, "GH₵") || strings.Contains(priceText, "$") {
+			if priceEl, err := card.ElementR("*", priceSelector); err == nil && priceEl != nil {
+				if priceText, err := priceEl.Text(); err == nil && (strings.Contains(priceText, "GH₵") || strings.Contains(priceText, "$")) {
 					price = priceText
 					break
 				}

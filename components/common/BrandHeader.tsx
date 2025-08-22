@@ -30,7 +30,7 @@ const BrandContainer = styled(Box)(({ theme }) => ({
   }
 }));
 
-const LogoContainer = styled(Stack)(({ theme }) => ({
+const LogoContainer = styled(Stack)(() => ({
   alignItems: 'center',
   position: 'relative',
   zIndex: 1,

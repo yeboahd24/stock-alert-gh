@@ -65,3 +65,28 @@ type DetailedStock struct {
 	EPS              *float64  `json:"eps"`
 	Company          Company   `json:"company"`
 }
+
+// GSE Dividend API response structures
+type GSEDividendStock struct {
+	Symbol        string  `json:"symbol"`
+	Name          string  `json:"name"`
+	DividendYield float64 `json:"dividend_yield"`
+	Price         string  `json:"price"`
+	MarketCap     string  `json:"market_cap"`
+	Country       string  `json:"country"`
+	Exchange      string  `json:"exchange"`
+	Sector        string  `json:"sector"`
+	URL           string  `json:"url"`
+}
+
+type GSEDividendData struct {
+	Timestamp string             `json:"timestamp"`
+	Source    string             `json:"source"`
+	Count     int                `json:"count"`
+	Stocks    []GSEDividendStock `json:"stocks"`
+}
+
+type GSEDividendResponse struct {
+	Success bool            `json:"success"`
+	Data    GSEDividendData `json:"data"`
+}

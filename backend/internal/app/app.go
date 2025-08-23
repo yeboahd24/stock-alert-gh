@@ -179,6 +179,9 @@ func setupRouter(
 		r.Route("/dividends", func(r chi.Router) {
 			r.Get("/", dividendHandler.GetAllDividends)
 			r.Get("/upcoming", dividendHandler.GetUpcomingDividends)
+			r.Get("/gse", dividendHandler.GetGSEDividendStocks)
+			r.Get("/gse/{symbol}", dividendHandler.GetDividendStockBySymbol)
+			r.Get("/high-yield", dividendHandler.GetHighDividendYieldStocks)
 			r.With(authHandler.AuthMiddleware).Post("/", dividendHandler.CreateDividend)
 		})
 

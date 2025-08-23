@@ -1,12 +1,15 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 
+	"shares-alert-backend/internal/httpclient"
 	"shares-alert-backend/internal/models"
 	"shares-alert-backend/internal/repository"
 )
@@ -63,6 +66,65 @@ func (s *DividendService) GetAllDividends() ([]*models.DividendAnnouncement, err
 
 func (s *DividendService) GetUpcomingDividends() ([]*models.DividendAnnouncement, error) {
 	return s.dividendRepo.GetUpcoming()
+}
+
+// GetGSEDividendStocks fetches dividend data directly from the GSE dividends API
+func (s *DividendService) GetGSEDividendStocks() (*models.GSEDividendResponse, error) {
+	client := httpclient.GetDefaultClient()
+	
+	resp, err := client.Get("https://gse-dividends.onrender.com/stocks")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch GSE dividend data: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("GSE API returned status %d", resp.StatusCode)
+	}
+
+	var dividendResponse models.GSEDividendResponse
+	if err := json.NewDecoder(resp.Body).Decode(&dividendResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode GSE dividend response: %w", err)
+	}
+
+	if !dividendResponse.Success {
+		return nil, fmt.Errorf("GSE API returned unsuccessful response")
+	}
+
+	return &dividendResponse, nil
+}
+
+// GetDividendStockBySymbol fetches dividend information for a specific stock symbol
+func (s *DividendService) GetDividendStockBySymbol(symbol string) (*models.GSEDividendStock, error) {
+	dividendData, err := s.GetGSEDividendStocks()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, stock := range dividendData.Data.Stocks {
+		if stock.Symbol == symbol {
+			return &stock, nil
+		}
+	}
+
+	return nil, fmt.Errorf("stock with symbol %s not found in dividend data", symbol)
+}
+
+// GetHighDividendYieldStocks returns stocks with dividend yield above a threshold
+func (s *DividendService) GetHighDividendYieldStocks(minYield float64) ([]models.GSEDividendStock, error) {
+	dividendData, err := s.GetGSEDividendStocks()
+	if err != nil {
+		return nil, err
+	}
+
+	var highYieldStocks []models.GSEDividendStock
+	for _, stock := range dividendData.Data.Stocks {
+		if stock.DividendYield >= minYield {
+			highYieldStocks = append(highYieldStocks, stock)
+		}
+	}
+
+	return highYieldStocks, nil
 }
 
 func (s *DividendService) StartDividendMonitoring() {

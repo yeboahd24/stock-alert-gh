@@ -32,7 +32,7 @@ import {
 } from '@mui/icons-material';
 import { dividendApi } from '../../src/services/api';
 import { GSEDividendStock, GSEDividendResponse } from '../../types/schema';
-import { formatPercentage, formatCurrency } from '../../utils/formatters';
+import { formatPercentage } from '../../utils/formatters';
 
 interface DividendYieldDashboardProps {
   onCreateAlert?: (alertData: any) => void;

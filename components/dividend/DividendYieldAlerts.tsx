@@ -23,7 +23,6 @@ import {
   Alert,
   CircularProgress,
   Stack,
-  Divider,
 } from '@mui/material';
 import {
   Edit,
@@ -31,7 +30,6 @@ import {
   Pause,
   PlayArrow,
   TrendingUp,
-  Target,
   ChangeCircle,
   NotificationsActive,
 } from '@mui/icons-material';
@@ -56,7 +54,7 @@ const DividendYieldAlerts: React.FC<DividendYieldAlertsProps> = ({ onEditAlert, 
     try {
       setLoading(true);
       setError(null);
-      const data = await alertApi.getAlerts();
+      const data = await alertApi.getAllAlerts();
       // Filter for dividend yield related alerts
       const dividendYieldAlerts = data.filter((alert: AlertModel) => 
         [
@@ -148,7 +146,7 @@ const DividendYieldAlerts: React.FC<DividendYieldAlertsProps> = ({ onEditAlert, 
 
   const activeAlerts = alerts.filter(alert => alert.status === AlertStatus.ACTIVE);
   const triggeredAlerts = alerts.filter(alert => alert.status === AlertStatus.TRIGGERED);
-  const inactiveAlerts = alerts.filter(alert => alert.status === AlertStatus.INACTIVE);
+
 
   if (loading) {
     return (

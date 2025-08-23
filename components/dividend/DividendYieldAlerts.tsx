@@ -106,7 +106,7 @@ const DividendYieldAlerts: React.FC<DividendYieldAlertsProps> = ({ onEditAlert, 
       case AlertType.HIGH_DIVIDEND_YIELD:
         return <TrendingUp color="success" />;
       case AlertType.TARGET_DIVIDEND_YIELD:
-        return <Target color="primary" />;
+        return <TrendingUp color="primary" />;
       case AlertType.DIVIDEND_YIELD_CHANGE:
         return <ChangeCircle color="warning" />;
       case AlertType.DIVIDEND_ANNOUNCEMENT:

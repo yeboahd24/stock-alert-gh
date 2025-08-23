@@ -158,7 +158,7 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
                 </MenuItem>
               ))}
             </Select>
-            <Typography variant=\"caption\" color=\"textSecondary\" sx={{ mt: 1 }}>
+            <Typography variant="caption" color="textSecondary" sx={{ mt: 1 }}>
               • Price Alert: Get notified when stock reaches your target price<br/>
               • IPO Alert: Get notified about new company listings<br/>
               • Dividend Alert: Get notified about dividend announcements<br/>
@@ -196,16 +196,16 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
           {formData.alertType === AlertType.HIGH_DIVIDEND_YIELD && (
             <>
               <TextField
-                label=\"Minimum Dividend Yield (%)\"\
-                type=\"number\"
+                label="Minimum Dividend Yield (%)"
+                type="number"
                 value={formData.thresholdYield || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, thresholdYield: parseFloat(e.target.value) }))}
                 error={!!errors.thresholdYield}
-                helperText={errors.thresholdYield || \"You'll be notified when any stock (or selected stock) reaches this dividend yield\"}
+                helperText={errors.thresholdYield || "You'll be notified when any stock (or selected stock) reaches this dividend yield"}
                 required
                 inputProps={{ min: 0, step: 0.1, max: 100 }}
               />
-              <Typography variant=\"body2\" color=\"textSecondary\" sx={{ p: 2, bgcolor: 'green.50', borderRadius: 1 }}>
+              <Typography variant="body2" color="textSecondary" sx={{ p: 2, bgcolor: 'green.50', borderRadius: 1 }}>
                 📈 Monitor the market for high dividend yield opportunities. Leave stock selection empty to monitor all stocks.
               </Typography>
             </>
@@ -214,16 +214,16 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
           {formData.alertType === AlertType.TARGET_DIVIDEND_YIELD && (
             <>
               <TextField
-                label=\"Target Dividend Yield (%)\"\
-                type=\"number\"
+                label="Target Dividend Yield (%)"
+                type="number"
                 value={formData.targetYield || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, targetYield: parseFloat(e.target.value) }))}
                 error={!!errors.targetYield}
-                helperText={errors.targetYield || \"You'll be notified when this specific stock reaches your target dividend yield\"}
+                helperText={errors.targetYield || "You'll be notified when this specific stock reaches your target dividend yield"}
                 required
                 inputProps={{ min: 0, step: 0.1, max: 100 }}
               />
-              <Typography variant=\"body2\" color=\"textSecondary\" sx={{ p: 2, bgcolor: 'blue.50', borderRadius: 1 }}>
+              <Typography variant="body2" color="textSecondary" sx={{ p: 2, bgcolor: 'blue.50', borderRadius: 1 }}>
                 🎯 Perfect for timing your entry into dividend-paying stocks. Set your ideal yield and wait for the right moment.
               </Typography>
             </>
@@ -232,16 +232,16 @@ const AlertForm: React.FC<AlertFormProps> = ({ open, onClose, onSubmit, stocks }
           {formData.alertType === AlertType.DIVIDEND_YIELD_CHANGE && (
             <>
               <TextField
-                label=\"Yield Change Threshold (%)\"\
-                type=\"number\"
+                label="Yield Change Threshold (%)"
+                type="number"
                 value={formData.yieldChangeThreshold || ''}
                 onChange={(e) => setFormData(prev => ({ ...prev, yieldChangeThreshold: parseFloat(e.target.value) }))}
                 error={!!errors.yieldChangeThreshold}
-                helperText={errors.yieldChangeThreshold || \"You'll be notified when the dividend yield changes by this amount or more\"}
+                helperText={errors.yieldChangeThreshold || "You'll be notified when the dividend yield changes by this amount or more"}
                 required
                 inputProps={{ min: 0, step: 0.1, max: 10 }}
               />
-              <Typography variant=\"body2\" color=\"textSecondary\" sx={{ p: 2, bgcolor: 'orange.50', borderRadius: 1 }}>
+              <Typography variant="body2" color="textSecondary" sx={{ p: 2, bgcolor: 'orange.50', borderRadius: 1 }}>
                 📊 Track significant dividend yield movements that might indicate opportunities or risks in your holdings.
               </Typography>
             </>

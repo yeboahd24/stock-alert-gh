@@ -43,34 +43,59 @@ func (s *AlertService) CreateAlert(userID string, req *models.CreateAlertRequest
 		models.AlertTypePriceThreshold:       true,
 		models.AlertTypeIPO:                  true,
 		models.AlertTypeDividendAnnouncement: true,
+		models.AlertTypeHighDividendYield:    true,
+		models.AlertTypeDividendYieldChange:  true,
+		models.AlertTypeTargetDividendYield:  true,
 	}
 	if !validAlertTypes[req.AlertType] {
 		return nil, fmt.Errorf("invalid alert type")
 	}
 
-	// For price threshold alerts, threshold price is required
+	// Validate required fields for different alert types
 	if req.AlertType == models.AlertTypePriceThreshold && req.ThresholdPrice == nil {
 		return nil, fmt.Errorf("thresholdPrice is required for price_threshold alerts")
 	}
+	if req.AlertType == models.AlertTypeHighDividendYield && req.ThresholdYield == nil {
+		return nil, fmt.Errorf("thresholdYield is required for high_dividend_yield alerts")
+	}
+	if req.AlertType == models.AlertTypeTargetDividendYield && req.TargetYield == nil {
+		return nil, fmt.Errorf("targetYield is required for target_dividend_yield alerts")
+	}
+	if req.AlertType == models.AlertTypeDividendYieldChange && req.YieldChangeThreshold == nil {
+		return nil, fmt.Errorf("yieldChangeThreshold is required for dividend_yield_change alerts")
+	}
 
-	// Get current stock price
+	// Get current stock price and dividend yield
 	var currentPrice *float64
+	var currentYield *float64
 	if stock, err := s.stockService.GetStock(req.StockSymbol); err == nil {
 		currentPrice = &stock.CurrentPrice
+	}
+	
+	// For dividend yield alerts, get current yield from GSE API
+	if req.AlertType == models.AlertTypeHighDividendYield || 
+	   req.AlertType == models.AlertTypeDividendYieldChange || 
+	   req.AlertType == models.AlertTypeTargetDividendYield {
+		// We'll need to inject DividendService here or get yield data
+		// For now, we'll set it to nil and update it during monitoring
 	}
 
 	// Create new alert
 	alert := &models.Alert{
-		ID:             uuid.New().String(),
-		UserID:         userID,
-		StockSymbol:    req.StockSymbol,
-		StockName:      req.StockName,
-		AlertType:      req.AlertType,
-		ThresholdPrice: req.ThresholdPrice,
-		CurrentPrice:   currentPrice,
-		Status:         models.AlertStatusActive,
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ID:                   uuid.New().String(),
+		UserID:               userID,
+		StockSymbol:          req.StockSymbol,
+		StockName:            req.StockName,
+		AlertType:            req.AlertType,
+		ThresholdPrice:       req.ThresholdPrice,
+		CurrentPrice:         currentPrice,
+		ThresholdYield:       req.ThresholdYield,
+		CurrentYield:         currentYield,
+		TargetYield:          req.TargetYield,
+		YieldChangeThreshold: req.YieldChangeThreshold,
+		Status:               models.AlertStatusActive,
+		CreatedAt:            time.Now(),
+		UpdatedAt:            time.Now(),
 	}
 
 	if err := s.alertRepo.Create(alert); err != nil {
@@ -110,6 +135,15 @@ func (s *AlertService) UpdateAlert(alertID, userID string, req *models.UpdateAle
 	}
 	if req.ThresholdPrice != nil {
 		alert.ThresholdPrice = req.ThresholdPrice
+	}
+	if req.ThresholdYield != nil {
+		alert.ThresholdYield = req.ThresholdYield
+	}
+	if req.TargetYield != nil {
+		alert.TargetYield = req.TargetYield
+	}
+	if req.YieldChangeThreshold != nil {
+		alert.YieldChangeThreshold = req.YieldChangeThreshold
 	}
 	if req.Status != nil {
 		alert.Status = *req.Status

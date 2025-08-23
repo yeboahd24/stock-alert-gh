@@ -38,6 +38,12 @@ export const formatAlertType = (type: AlertType): string => {
       return 'IPO Alert';
     case AlertType.DIVIDEND_ANNOUNCEMENT:
       return 'Dividend Announcement';
+    case AlertType.HIGH_DIVIDEND_YIELD:
+      return 'High Dividend Yield';
+    case AlertType.DIVIDEND_YIELD_CHANGE:
+      return 'Dividend Yield Change';
+    case AlertType.TARGET_DIVIDEND_YIELD:
+      return 'Target Dividend Yield';
     default:
       return type;
   }

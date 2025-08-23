@@ -426,3 +426,183 @@ func (s *EmailService) generateDividendPaymentEmail(userName string, dividend *m
 </html>
 `, userName, dividend.StockName, dividend.StockSymbol, dividend.DividendType, dividend.Currency, dividend.Amount, dividend.PaymentDate.Format("January 2, 2006"), dividend.StockName), nil
 }
+
+func (s *EmailService) SendDividendYieldAlertEmail(user *models.User, alert *models.Alert, currentYield float64) error {
+	if s.config.SMTPUser == "" || s.config.SMTPPassword == "" {
+		return fmt.Errorf("email service not configured")
+	}
+
+	var subject string
+	var body string
+	var err error
+
+	switch alert.AlertType {
+	case models.AlertTypeHighDividendYield:
+		subject = fmt.Sprintf("High Dividend Yield Alert: %s (%s)", alert.StockName, alert.StockSymbol)
+		body, err = s.generateHighDividendYieldEmail(user.Name, alert, currentYield)
+	case models.AlertTypeTargetDividendYield:
+		subject = fmt.Sprintf("Target Dividend Yield Reached: %s (%s)", alert.StockName, alert.StockSymbol)
+		body, err = s.generateTargetDividendYieldEmail(user.Name, alert, currentYield)
+	case models.AlertTypeDividendYieldChange:
+		subject = fmt.Sprintf("Dividend Yield Change Alert: %s (%s)", alert.StockName, alert.StockSymbol)
+		body, err = s.generateDividendYieldChangeEmail(user.Name, alert, currentYield)
+	default:
+		return fmt.Errorf("unsupported dividend yield alert type: %s", alert.AlertType)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to generate email body: %w", err)
+	}
+
+	return s.sendEmail(user.Email, subject, body)
+}
+
+func (s *EmailService) generateHighDividendYieldEmail(userName string, alert *models.Alert, currentYield float64) (string, error) {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>High Dividend Yield Alert</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #16a34a; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .yield-box { background-color: #fff; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .yield { font-size: 28px; font-weight: bold; color: #16a34a; }
+        .threshold { font-size: 18px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 High Dividend Yield Alert!</h1>
+        </div>
+        <div class="content">
+            <p>Hello %s,</p>
+            
+            <div class="yield-box">
+                <h3>%s (%s)</h3>
+                <p><strong>Current Dividend Yield:</strong> <span class="yield">%.2f%%</span></p>
+                <p class="threshold">Your threshold: %.2f%%</p>
+            </div>
+            
+            <p>Great news! %s has reached your high dividend yield threshold of %.2f%%. The current dividend yield is %.2f%%.</p>
+            
+            <p>This could be a good opportunity to consider this stock for dividend income investing.</p>
+            
+            <p>Best regards,<br>The Shares Alert Ghana Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated dividend yield alert from Shares Alert Ghana.</p>
+        </div>
+    </div>
+</body>
+</html>
+`, userName, alert.StockName, alert.StockSymbol, currentYield, *alert.ThresholdYield, alert.StockName, *alert.ThresholdYield, currentYield), nil
+}
+
+func (s *EmailService) generateTargetDividendYieldEmail(userName string, alert *models.Alert, currentYield float64) (string, error) {
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Target Dividend Yield Reached</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .yield-box { background-color: #fff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .yield { font-size: 28px; font-weight: bold; color: #2563eb; }
+        .target { font-size: 18px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Target Dividend Yield Reached!</h1>
+        </div>
+        <div class="content">
+            <p>Hello %s,</p>
+            
+            <div class="yield-box">
+                <h3>%s (%s)</h3>
+                <p><strong>Current Dividend Yield:</strong> <span class="yield">%.2f%%</span></p>
+                <p class="target">Your target: %.2f%%</p>
+            </div>
+            
+            <p>Excellent! %s has reached your target dividend yield of %.2f%%. The current yield is %.2f%%.</p>
+            
+            <p>This might be the perfect time to consider your investment strategy for this stock.</p>
+            
+            <p>Best regards,<br>The Shares Alert Ghana Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated target dividend yield alert from Shares Alert Ghana.</p>
+        </div>
+    </div>
+</body>
+</html>
+`, userName, alert.StockName, alert.StockSymbol, currentYield, *alert.TargetYield, alert.StockName, *alert.TargetYield, currentYield), nil
+}
+
+func (s *EmailService) generateDividendYieldChangeEmail(userName string, alert *models.Alert, currentYield float64) (string, error) {
+	change := currentYield - *alert.LastYield
+	changeDirection := "increased"
+	if change < 0 {
+		changeDirection = "decreased"
+		change = -change
+	}
+
+	return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Dividend Yield Change Alert</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f59e0b; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .yield-box { background-color: #fff; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        .yield { font-size: 24px; font-weight: bold; color: #f59e0b; }
+        .change { font-size: 18px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Dividend Yield Change Alert!</h1>
+        </div>
+        <div class="content">
+            <p>Hello %s,</p>
+            
+            <div class="yield-box">
+                <h3>%s (%s)</h3>
+                <p><strong>Current Dividend Yield:</strong> <span class="yield">%.2f%%</span></p>
+                <p class="change">Previous yield: %.2f%%</p>
+                <p class="change">Change: %.2f%% (%s)</p>
+                <p class="change">Your threshold: %.2f%%</p>
+            </div>
+            
+            <p>The dividend yield for %s has %s by %.2f%%, which exceeds your change threshold of %.2f%%.</p>
+            
+            <p>This significant change might warrant a review of your investment position in this stock.</p>
+            
+            <p>Best regards,<br>The Shares Alert Ghana Team</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated dividend yield change alert from Shares Alert Ghana.</p>
+        </div>
+    </div>
+</body>
+</html>
+`, userName, alert.StockName, alert.StockSymbol, currentYield, *alert.LastYield, change, changeDirection, *alert.YieldChangeThreshold, alert.StockName, changeDirection, change, *alert.YieldChangeThreshold), nil
+}

@@ -372,6 +372,65 @@ export const alertApi = {
   },
 };
 
+// GSE Dividend API functions
+export const dividendApi = {
+  // Get all GSE dividend stocks
+  getGSEDividendStocks: async (): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/dividends/gse`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch GSE dividend stocks');
+    }
+    
+    return response.json();
+  },
+
+  // Get dividend data for specific stock
+  getDividendStockBySymbol: async (symbol: string): Promise<any> => {
+    const response = await fetch(`${API_BASE_URL}/dividends/gse/${symbol}`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dividend data for ${symbol}`);
+    }
+    
+    return response.json();
+  },
+
+  // Get high dividend yield stocks
+  getHighDividendYieldStocks: async (minYield?: number): Promise<any> => {
+    const params = minYield ? `?minYield=${minYield}` : '';
+    const response = await fetch(`${API_BASE_URL}/dividends/high-yield${params}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch high dividend yield stocks');
+    }
+    
+    return response.json();
+  },
+
+  // Get traditional dividend announcements
+  getAllDividends: async (): Promise<any> => {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/dividends`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch dividend announcements');
+    }
+    
+    return response.json();
+  },
+
+  // Get upcoming dividend payments
+  getUpcomingDividends: async (): Promise<any> => {
+    const response = await makeAuthenticatedRequest(`${API_BASE_URL}/dividends/upcoming`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch upcoming dividends');
+    }
+    
+    return response.json();
+  },
+};
+
 // Health check
 export const healthCheck = async (): Promise<{ status: string; timestamp: string }> => {
   const response = await fetch(`${API_BASE_URL}/health`);

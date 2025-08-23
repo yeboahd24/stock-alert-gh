@@ -2,7 +2,10 @@
 export enum AlertType {
   PRICE_THRESHOLD = 'price_threshold',
   IPO_ALERT = 'ipo_alert',
-  DIVIDEND_ANNOUNCEMENT = 'dividend_announcement'
+  DIVIDEND_ANNOUNCEMENT = 'dividend_announcement',
+  HIGH_DIVIDEND_YIELD = 'high_dividend_yield',
+  DIVIDEND_YIELD_CHANGE = 'dividend_yield_change',
+  TARGET_DIVIDEND_YIELD = 'target_dividend_yield'
 }
 
 // Notification channels available

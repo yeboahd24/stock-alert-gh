@@ -129,7 +129,9 @@ func (s *DividendService) GetHighDividendYieldStocks(minYield float64) ([]models
 
 func (s *DividendService) StartDividendMonitoring() {
 	ticker := time.NewTicker(6 * time.Hour) // Check every 6 hours
+	yieldTicker := time.NewTicker(30 * time.Minute) // Check dividend yields every 30 minutes
 	defer ticker.Stop()
+	defer yieldTicker.Stop()
 
 	log.Println("Starting dividend monitoring service...")
 
@@ -138,6 +140,10 @@ func (s *DividendService) StartDividendMonitoring() {
 		case <-ticker.C:
 			if err := s.checkDividendPayments(); err != nil {
 				log.Printf("Error checking dividend payments: %v", err)
+			}
+		case <-yieldTicker.C:
+			if err := s.checkDividendYieldAlerts(); err != nil {
+				log.Printf("Error checking dividend yield alerts: %v", err)
 			}
 		}
 	}
@@ -234,4 +240,121 @@ func (s *DividendService) notifyDividendAlert(alert *models.Alert, dividend *mod
 	}
 
 	return nil
+}
+
+// checkDividendYieldAlerts monitors dividend yield changes and triggers alerts
+func (s *DividendService) checkDividendYieldAlerts() error {
+	// Get current dividend data from GSE API
+	dividendData, err := s.GetGSEDividendStocks()
+	if err != nil {
+		return fmt.Errorf("failed to fetch GSE dividend data: %w", err)
+	}
+
+	// Get all active dividend yield alerts
+	alerts, err := s.alertRepo.GetActiveDividendYieldAlerts()
+	if err != nil {
+		return fmt.Errorf("failed to get dividend yield alerts: %w", err)
+	}
+
+	// Create a map for quick stock lookup
+	stockYields := make(map[string]float64)
+	for _, stock := range dividendData.Data.Stocks {
+		stockYields[stock.Symbol] = stock.DividendYield
+	}
+
+	// Process each alert
+	for _, alert := range alerts {
+		currentYield, exists := stockYields[alert.StockSymbol]
+		if !exists {
+			continue // Skip if stock not found in dividend data
+		}
+
+		// Update current yield in alert
+		alert.CurrentYield = &currentYield
+		if err := s.alertRepo.UpdateCurrentYield(alert.StockSymbol, currentYield); err != nil {
+			log.Printf("Failed to update current yield for %s: %v", alert.StockSymbol, err)
+		}
+
+		// Check alert conditions based on type
+		triggered := false
+		switch alert.AlertType {
+		case models.AlertTypeHighDividendYield:
+			triggered = s.checkHighDividendYieldAlert(alert, currentYield)
+		case models.AlertTypeTargetDividendYield:
+			triggered = s.checkTargetDividendYieldAlert(alert, currentYield)
+		case models.AlertTypeDividendYieldChange:
+			triggered = s.checkDividendYieldChangeAlert(alert, currentYield)
+		}
+
+		if triggered {
+			go s.triggerDividendYieldAlert(alert, currentYield)
+		}
+	}
+
+	return nil
+}
+
+// checkHighDividendYieldAlert checks if dividend yield exceeds threshold
+func (s *DividendService) checkHighDividendYieldAlert(alert *models.Alert, currentYield float64) bool {
+	return alert.ThresholdYield != nil && currentYield >= *alert.ThresholdYield
+}
+
+// checkTargetDividendYieldAlert checks if dividend yield reaches target
+func (s *DividendService) checkTargetDividendYieldAlert(alert *models.Alert, currentYield float64) bool {
+	return alert.TargetYield != nil && currentYield >= *alert.TargetYield
+}
+
+// checkDividendYieldChangeAlert checks if dividend yield changed significantly
+func (s *DividendService) checkDividendYieldChangeAlert(alert *models.Alert, currentYield float64) bool {
+	if alert.YieldChangeThreshold == nil || alert.LastYield == nil {
+		// Initialize last yield for first time
+		if alert.LastYield == nil {
+			s.alertRepo.UpdateLastYield(alert.StockSymbol, currentYield)
+		}
+		return false
+	}
+
+	change := currentYield - *alert.LastYield
+	if change < 0 {
+		change = -change // Absolute value
+	}
+
+	if change >= *alert.YieldChangeThreshold {
+		// Update last yield after triggering
+		s.alertRepo.UpdateLastYield(alert.StockSymbol, currentYield)
+		return true
+	}
+
+	return false
+}
+
+// triggerDividendYieldAlert sends notifications for dividend yield alerts
+func (s *DividendService) triggerDividendYieldAlert(alert *models.Alert, currentYield float64) {
+	// Get user for notification
+	user, err := s.userRepo.GetByID(alert.UserID)
+	if err != nil {
+		log.Printf("Failed to get user for dividend yield alert: %v", err)
+		return
+	}
+
+	// Check user preferences
+	prefs, err := s.userRepo.GetPreferences(user.ID)
+	if err != nil {
+		log.Printf("Failed to get user preferences, assuming defaults: %v", err)
+	}
+
+	// Send email notification if enabled
+	if prefs == nil || prefs.EmailNotifications {
+		if err := s.emailService.SendDividendYieldAlertEmail(user, alert, currentYield); err != nil {
+			log.Printf("Failed to send dividend yield alert email: %v", err)
+		}
+	}
+
+	// Mark alert as triggered
+	if err := s.alertRepo.TriggerAlert(alert.ID); err != nil {
+		log.Printf("Failed to mark dividend yield alert as triggered: %v", err)
+	}
+
+	log.Printf("Dividend yield alert triggered for %s (%s): %.2f%% yield", 
+		alert.StockSymbol, alert.AlertType, currentYield)
 }

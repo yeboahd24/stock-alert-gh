@@ -20,9 +20,14 @@ export interface StoreTypes {
     id: string;
     stockSymbol: string;
     stockName: string;
-    alertType: 'price_threshold' | 'ipo_alert' | 'dividend_announcement';
+    alertType: 'price_threshold' | 'ipo_alert' | 'dividend_announcement' | 'high_dividend_yield' | 'dividend_yield_change' | 'target_dividend_yield';
     thresholdPrice?: number;
     currentPrice?: number;
+    thresholdYield?: number;
+    currentYield?: number;
+    targetYield?: number;
+    yieldChangeThreshold?: number;
+    lastYield?: number;
     status: 'active' | 'inactive' | 'triggered';
     createdAt: string;
   }>;
@@ -47,4 +52,59 @@ export interface QueryTypes {
     timestamp: string;
     read: boolean;
   }>;
+}
+
+// GSE Dividend API types
+export interface GSEDividendStock {
+  symbol: string;
+  name: string;
+  dividend_yield: number;
+  price: string;
+  market_cap: string;
+  country: string;
+  exchange: string;
+  sector: string;
+  url: string;
+}
+
+export interface GSEDividendData {
+  timestamp: string;
+  source: string;
+  count: number;
+  stocks: GSEDividendStock[];
+}
+
+export interface GSEDividendResponse {
+  success: boolean;
+  data: GSEDividendData;
+}
+
+// Enhanced Alert types
+export interface Alert {
+  id: string;
+  userId: string;
+  stockSymbol: string;
+  stockName: string;
+  alertType: string;
+  thresholdPrice?: number;
+  currentPrice?: number;
+  thresholdYield?: number;
+  currentYield?: number;
+  targetYield?: number;
+  yieldChangeThreshold?: number;
+  lastYield?: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  triggeredAt?: string;
+}
+
+export interface CreateAlertRequest {
+  stockSymbol: string;
+  stockName: string;
+  alertType: string;
+  thresholdPrice?: number;
+  thresholdYield?: number;
+  targetYield?: number;
+  yieldChangeThreshold?: number;
 }

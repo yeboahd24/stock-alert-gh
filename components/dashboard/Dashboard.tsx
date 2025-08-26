@@ -261,7 +261,7 @@ const Dashboard: React.FC = () => {
         {/* User Menu */}
         <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
           <UserMenu 
-            onOpenSettings={() => setCurrentTab(2)}
+            onOpenProfile={() => setCurrentTab(3)}
             onOpenNotifications={() => setCurrentTab(2)}
           />
         </Stack>

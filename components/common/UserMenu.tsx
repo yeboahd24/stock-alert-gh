@@ -11,18 +11,17 @@ import {
 } from '@mui/material';
 import {
   AccountCircle,
-  Settings,
   Logout,
   Notifications,
 } from '@mui/icons-material';
 import { useAuth } from '../../src/contexts/AuthContext';
 
 interface UserMenuProps {
-  onOpenSettings?: () => void;
+  onOpenProfile?: () => void;
   onOpenNotifications?: () => void;
 }
 
-const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings, onOpenNotifications }) => {
+const UserMenu: React.FC<UserMenuProps> = ({ onOpenProfile, onOpenNotifications }) => {
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -40,8 +39,8 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings, onOpenNotifications
     handleClose();
   };
 
-  const handleSettings = () => {
-    onOpenSettings?.();
+  const handleProfile = () => {
+    onOpenProfile?.();
     handleClose();
   };
 
@@ -120,7 +119,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings, onOpenNotifications
         <Divider />
 
         {/* Menu Items */}
-        <MenuItem onClick={handleClose}>
+        <MenuItem onClick={handleProfile}>
           <ListItemIcon>
             <AccountCircle fontSize="small" />
           </ListItemIcon>
@@ -132,13 +131,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ onOpenSettings, onOpenNotifications
             <Notifications fontSize="small" />
           </ListItemIcon>
           Notification Settings
-        </MenuItem>
-
-        <MenuItem onClick={handleSettings}>
-          <ListItemIcon>
-            <Settings fontSize="small" />
-          </ListItemIcon>
-          Settings
         </MenuItem>
 
         <Divider />

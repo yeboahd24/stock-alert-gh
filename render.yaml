@@ -12,9 +12,9 @@ services:
       - key: GO_ENV
         value: production
       - key: OAUTH_REDIRECT_URL
-        value: https://stock-alert-gh.onrender.com/
+        value: https://stock-alert-gh-gsbj.onrender.com/
       - key: FRONTEND_URL
-        value: https://stock-alert-gh.onrender.com
+        value: https://stock-alert-gh-gsbj.onrender.com/
       - key: DB_TYPE
         value: postgres
       - key: DB_HOST
@@ -37,10 +37,10 @@ services:
     env: static
     # If your frontend code is in a subdirectory (e.g., 'frontend'), specify it here.
     # rootDir: frontend
-    buildCommand: VITE_API_URL=https://stock-alert-gh-backend.onrender.com/api/v1 npm ci && npm run build
+    buildCommand: VITE_API_URL=https://stock-alert-gh-backend-h2hh.onrender.com/api/v1 npm ci && npm run build
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        value: https://stock-alert-gh-backend.onrender.com/api/v1
+        value: https://stock-alert-gh-backend-h2hh.onrender.com/api/v1
         
 databases: []

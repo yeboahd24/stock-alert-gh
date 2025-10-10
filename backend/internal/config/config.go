@@ -75,6 +75,8 @@ func Load() (*Config, error) {
 				"http://localhost:5173",
 				"https://stock-alert-gh-gsbj.onrender.com",
 				"https://stock-alert-gh-backend-h2hh.onrender.com",
+				"https://stock-alert-gh.onrender.com",
+				"https://stock-alert-gh-backend.onrender.com",
 			},
 			RequestTimeout: getEnvAsInt("REQUEST_TIMEOUT", 60),
 		},

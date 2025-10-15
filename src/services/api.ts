@@ -9,7 +9,7 @@ const getApiBaseUrl = (): string => {
   
   // Fallback for production deployment
   if (import.meta.env?.PROD) {
-    return 'https://stock-alert-gh-backend-h2hh.onrender.com/api/v1';
+    return 'https://stock-alert-gh-backend.onrender.com/api/v1';
   }
   
   // Development fallback

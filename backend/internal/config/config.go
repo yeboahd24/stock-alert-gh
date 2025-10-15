@@ -73,8 +73,6 @@ func Load() (*Config, error) {
 				getEnv("FRONTEND_URL", "http://localhost:3000"),
 				"http://localhost:3000",
 				"http://localhost:5173",
-				"https://stock-alert-gh-gsbj.onrender.com",
-				"https://stock-alert-gh-backend-h2hh.onrender.com",
 				"https://stock-alert-gh.onrender.com",
 				"https://stock-alert-gh-backend.onrender.com",
 			},
